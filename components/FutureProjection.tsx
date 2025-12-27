@@ -18,6 +18,8 @@ const getDefaultRate = (type: string) => {
         case 'investment': return 7.0;
         case 'realestate': return 3.5;
         case 'savings': return 2.0;
+        case 'emergency': return 4.0; // Requested default
+        case 'checking': return 0.0; // Usually no return
         default: return 5.0;
     }
 };
@@ -67,24 +69,33 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
               simDeposit: 0,
               depositYears: defaultYears
           })),
-          ...data.accounts.filter(a => a.type === 'savings').map(a => ({ 
-              id: a.id, 
-              name: a.name, 
-              value: a.value, 
-              category: 'חיסכון', 
-              type: 'savings', 
-              isIncluded: true,
-              simRate: getDefaultRate('savings'),
-              simDeposit: 0, // Savings usually don't have fixed monthly like pension, but user can add
-              depositYears: defaultYears
-          })),
+          // Map ALL accounts (Checking, Emergency, Savings)
+          ...data.accounts.map(a => {
+              let categoryName = 'עו״ש';
+              if (a.type === 'emergency') categoryName = 'קרן ביטחון';
+              if (a.type === 'savings') categoryName = 'חיסכון';
+
+              return { 
+                  id: a.id, 
+                  name: a.name, 
+                  value: a.value, 
+                  category: categoryName, 
+                  type: a.type, 
+                  // Checking is excluded by default
+                  isIncluded: a.type !== 'checking',
+                  simRate: getDefaultRate(a.type),
+                  simDeposit: 0, 
+                  depositYears: defaultYears
+              };
+          }),
           ...data.realEstate.map(r => ({ 
               id: r.id, 
               name: r.name, 
               value: r.value, 
               category: 'נדל״ן', 
               type: 'realestate', 
-              isIncluded: true, // Included by default now
+              // Real Estate excluded by default per request
+              isIncluded: false, 
               simRate: getDefaultRate('realestate'),
               simDeposit: 0,
               depositYears: defaultYears
