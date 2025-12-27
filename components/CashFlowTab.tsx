@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CashFlowState, IncomeItem, LoanItem, RealEstateItem } from '../types';
-import { ArrowRight, Save, Plus, Trash2, ArrowRightLeft, Building2, CreditCard } from 'lucide-react';
+import { ArrowRight, Save, Plus, Trash2, ArrowRightLeft, Building2, CreditCard, BookOpen, ExternalLink, TrendingUp } from 'lucide-react';
 import NumberInput from './NumberInput';
 
 interface CashFlowTabProps {
@@ -90,7 +90,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
   const netFlow = finalTotalIncome - totalExpenses;
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in pb-24">
        {/* Header */}
        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -273,6 +273,36 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                 </div>
             </div>
        </div>
+
+        {/* --- KNOWLEDGE SECTION --- */}
+        <div className="pt-8 border-t border-slate-200/60 mt-8">
+            <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2 text-lg">
+                <BookOpen className="text-emerald-500" size={24} />
+                ידע זה כוח - מדריכים מקצועיים
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%A4%D7%A8%D7%99%D7%A9%D7%94-%D7%9E%D7%95%D7%A7%D7%93%D7%9E%D7%AA-%D7%95%D7%99%D7%A6%D7%99%D7%A8%D7%AA-%D7%AA%D7%96%D7%A8%D7%99%D7%9D-%D7%9E%D7%AA%D7%99%D7%A7-%D7%94%D7%94%D7%A9%D7%A7%D7%A2%D7%95%D7%AA-%D7%A9%D7%9C%D7%9B%D7%9D" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><TrendingUp size={10}/> חופש כלכלי</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">יצירת תזרים מתיק ההשקעות</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            חולמים לפרוש מוקדם או להוריד אחוזי משרה? כך ניתן להתקיים מההשקעות והנכסים שלכם וליצור תזרים מזומנים חיובי.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+            </div>
+        </div>
+
     </div>
   );
 };

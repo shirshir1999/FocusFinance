@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PensionItem, BaseItem, HistoryEntry } from '../types';
-import { Plus, Trash2, Umbrella, BarChart2, User, ArrowRight, Percent, Layers, AlertCircle, X, Save, BookOpen, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Umbrella, BarChart2, User, ArrowRight, Percent, Layers, AlertCircle, X, Save, BookOpen, ExternalLink, GraduationCap, FileText } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -364,7 +364,7 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
                 <BookOpen className="text-cyan-500" size={24} />
                 ידע זה כוח - מדריכים מקצועיים
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <a 
                     href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%A4%D7%A0%D7%A1%D7%99%D7%94-%D7%93%D7%91%D7%A8%D7%99%D7%9D-%D7%A9%D7%9B%D7%93%D7%90%D7%99-%D7%9C%D7%93%D7%A2%D7%AA" 
                     target="_blank" 
@@ -373,11 +373,11 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-1 rounded-full">פנסיה</span>
+                            <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><Umbrella size={10}/> פנסיה</span>
                         </div>
                         <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-cyan-700 transition-colors">פנסיה: דברים שכדאי לדעת</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            פנסיה היא החיסכון הגדול ביותר שלכם. איך בוחרים מסלול השקעה נכון? מה חשיבות דמי הניהול בטווח הארוך? ואיך מוודאים שהכיסוי הביטוחי בקרן אכן מתאים לצרכים שלכם?
+                            כנראה ההשקעה החשובה והארוכה ביותר לכל אחד מאיתנו. איך בוחרים מסלול נכון? ואיך מוודאים שהכיסוי הביטוחי מתאים לצרכים?
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-cyan-600 text-sm font-bold gap-1">
@@ -393,14 +393,34 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full">קרן השתלמות</span>
+                            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><GraduationCap size={10}/> קרן השתלמות</span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-amber-700 transition-colors">הסוד של קרן השתלמות</h4>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-amber-700 transition-colors">המוצר הטוב ביותר למשקיע?</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            קרן השתלמות היא מתנה מהמדינה ואפיק החיסכון היחיד לטווח בינוני שפטור ממס רווח הון. מדוע כדאי להפוך עולמות כדי להפקיד אליה, ולמה ממש לא כדאי למשוך אותה אחרי 6 שנים?
+                            קרן השתלמות היא מתנה מהמדינה ואפיק החיסכון היחיד שפטור ממס רווח הון. למה כדאי להפוך עולמות כדי להפקיד אליה?
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-amber-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                 <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/allaboutfees" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-rose-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><FileText size={10}/> עמלות</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-rose-700 transition-colors">דמי ניהול, עמלות ומיסים</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            אף אחד לא עובד בחינם. בפוסט זה אפרט מה לוקחים, איך לוקחים, מה טוב, מה רע ומה מוגזם בתחום הפנסיוני.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-rose-600 text-sm font-bold gap-1">
                         קראו עוד באתר <ExternalLink size={14} />
                     </div>
                 </a>

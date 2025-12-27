@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LoanItem, BaseItem, HistoryEntry } from '../types';
-import { Plus, Trash2, CreditCard, ArrowRight, Calendar, Percent, RefreshCw, AlertCircle, X, Save } from 'lucide-react';
+import { Plus, Trash2, CreditCard, ArrowRight, Calendar, Percent, RefreshCw, AlertCircle, X, Save, BookOpen, ExternalLink, ShieldCheck } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -346,6 +346,55 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                 </form>
             </div>
         )}
+
+         {/* --- KNOWLEDGE SECTION --- */}
+        <div className="pt-8 border-t border-slate-200/60">
+            <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2 text-lg">
+                <BookOpen className="text-rose-500" size={24} />
+                ידע זה כוח - מדריכים מקצועיים
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%9E%D7%97%D7%96%D7%95%D7%A8-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><RefreshCw size={10}/> משכנתא</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">מתי שווה למחזר משכנתא?</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            הסכום מכביד? הריביות השתנו? מחזור משכנתא יכול לחסוך עשרות אלפי שקלים. מתי כדאי לבדוק את הנושא?
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+                
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/emerejencyfund" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-rose-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><ShieldCheck size={10}/> מניעת חובות</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-rose-700 transition-colors">איך להימנע מהלוואות בעתיד?</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            הדרך הטובה ביותר להתמודד עם חובות היא לא להיכנס אליהם מלכתחילה. למה אתם חייבים קרן ביטחון לשעת חירום.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-rose-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+            </div>
+        </div>
 
       </div>
 

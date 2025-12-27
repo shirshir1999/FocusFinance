@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { RealEstateItem, BaseItem, HistoryEntry, MortgageTrack } from '../types';
-import { Plus, Trash2, Building2, Home, MapPin, ArrowRight, CreditCard, AlertCircle, X, Save, BookOpen, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Building2, Home, MapPin, ArrowRight, CreditCard, AlertCircle, X, Save, BookOpen, ExternalLink, RefreshCw } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -389,14 +389,34 @@ const RealEstateTab: React.FC<RealEstateTabProps> = ({ items, onAdd, onRemove, o
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full">נדל"ן להשקעה</span>
+                            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><Home size={10}/> נדל"ן להשקעה</span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-indigo-700 transition-colors">השקעה בנדל״ן או בשוק ההון?</h4>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-indigo-700 transition-colors">נדל"ן למתחילים</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            מה התשואה האמיתית על דירה להשקעה? איך מחשבים אותה נכון? ומהן הסכנות במינוף גבוה? המדריך המלא שיעשה לכם סדר בנכס היקר ביותר שלכם.
+                            המדריך למשקיע המתחיל בתחום הנדל"ן. מה התשואה האמיתית על דירה להשקעה? איך מחשבים אותה נכון? ומהן הסכנות במינוף גבוה?
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-indigo-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%9E%D7%97%D7%96%D7%95%D7%A8-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><RefreshCw size={10}/> משכנתא</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">מתי שווה למחזר משכנתא?</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            הסכום מכביד? הריביות השתנו? מחזור משכנתא יכול לחסוך עשרות אלפי שקלים. מתי כדאי לבדוק את הנושא?
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
                         קראו עוד באתר <ExternalLink size={14} />
                     </div>
                 </a>

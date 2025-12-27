@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { InvestmentItem, BaseItem, HistoryEntry, InvestmentHolding, CurrencyType } from '../types';
-import { Plus, Trash2, TrendingUp, BarChart, Bitcoin, FileText, Activity, ArrowRight, Percent, X, Edit2, AlertCircle, Layers, Save, ShoppingCart, DollarSign, BookOpen, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, BarChart, Bitcoin, FileText, Activity, ArrowRight, Percent, X, Edit2, AlertCircle, Layers, Save, ShoppingCart, DollarSign, BookOpen, ExternalLink, PieChart, Globe } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -464,7 +464,11 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                 <BookOpen className="text-purple-500" size={24} />
                 ידע זה כוח - מדריכים מקצועיים
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+            
+            {/* Unified 3-column Grid for symmetry */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                
+                {/* Item 1 */}
                 <a 
                     href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/passiveportfolio" 
                     target="_blank" 
@@ -473,11 +477,11 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full">תיק השקעות</span>
+                            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><PieChart size={10}/> תיק פאסיבי</span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-purple-700 transition-colors">בניית תיק השקעות מנצח</h4>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-purple-700 transition-colors">בואו נרכיב יחד תיק השקעות</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            איך בונים תיק השקעות יציב במינימום מאמץ? המדריך המלא להשקעה פסיבית, חשיבות הקצאת הנכסים ופיזור סיכונים חכם לטווח הארוך.
+                            להרכיב תיק השקעות פאסיבי מחקה מדדים זאת בכלל לא משימה קשה. המדריך למשקיע המתחיל שרוצה שקט נפשי.
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-purple-600 text-sm font-bold gap-1">
@@ -485,19 +489,20 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                     </div>
                 </a>
 
+                {/* Item 2 */}
                 <a 
-                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/allaboutfees" 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/howtousespark" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full">חיסכון בעמלות</span>
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><Activity size={10}/> מסחר עצמאי</span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">לא לפחד ממערכת המסחר</h4>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">לא לפחד ממערכת המסחר!</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            מעבר לחשבון מסחר עצמאי יכול לחסוך לכם אלפי שקלים בעמלות ודמי ניהול לאורך השנים. המדריך הפרקטי להבנת העלויות והפחתת הפחד מהמערכת.
+                            תוכנת המסחר יכולה להיראות מסובכת, אבל היא לא. בפוסט זה אפרט את הדרכים הקלות ביותר לביצוע קנייה ומכירה.
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
@@ -505,22 +510,86 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                     </div>
                 </a>
 
+                {/* Item 3 (New) - Completes the first row */}
                 <a 
                     href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%9C%D7%A7%D7%A8%D7%A0%D7%95%D7%AA-%D7%A1%D7%9C-%D7%90%D7%99%D7%A8%D7%99%D7%95%D7%AA-%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%95%D7%AA-%D7%95%D7%90%D7%9E%D7%A8%D7%99%D7%A7%D7%90%D7%99%D7%95%D7%AA" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-cyan-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><Globe size={10}/> קרנות סל</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-cyan-700 transition-colors">מדריך לקרנות סל</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            אז החלטתם שאתם רוצים להשקיע במדד כמו S&P500 ונדהמתם מכמות האפשרויות? בואו ננסה לעשות קצת סדר בבלאגן.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-cyan-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                {/* Item 4 - Starts second row */}
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/stocksandbonds" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition group flex flex-col justify-between h-full"
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">מכשירים פיננסיים</span>
+                            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><Percent size={10}/> הקצאת נכסים</span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-blue-700 transition-colors">המדריך לקרנות סל (ETFs)</h4>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-blue-700 transition-colors">כמה מניות וכמה אג"ח?</h4>
                         <p className="text-sm text-slate-500 leading-relaxed">
-                            קרנות סל הן אבני הבניין של התיק הפסיבי. מה ההבדל בין קרן ישראלית, אירית או אמריקאית? ואיך הבחירה משפיעה על המיסוי שלכם?
+                            התמהיל הנכון תלוי במטרות ובסיבולת הסיכון שלכם. איך בונים תיק שתוכלו להתמיד איתו גם כשהשוק סוער?
                         </p>
                     </div>
                     <div className="mt-4 flex items-center text-blue-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                {/* Item 5 */}
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%92%D7%9E%D7%9C-%D7%9C%D7%94%D7%A9%D7%A7%D7%A2%D7%94-vs-%D7%97%D7%A9%D7%91%D7%95%D7%9F-%D7%9E%D7%A1%D7%97%D7%A8-%D7%A2%D7%A6%D7%9E%D7%90%D7%99" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-orange-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><ArrowRight size={10}/> השוואה</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-orange-700 transition-colors">גמל להשקעה או מסחר עצמאי?</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            גמל להשקעה הוא מוצר פופולרי, אבל האם הוא משתלם? השוואה מלאה מול אלטרנטיבת המסחר העצמאי הזולה יותר.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-orange-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                {/* Item 6 */}
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/allaboutfees" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-rose-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1"><FileText size={10}/> עמלות</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-rose-700 transition-colors">דמי ניהול, עמלות ומיסים</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            אף אחד לא עובד בחינם. בפוסט זה אפרט מה לוקחים, איך לוקחים, מה טוב, מה רע ומה מוגזם.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-rose-600 text-sm font-bold gap-1">
                         קראו עוד באתר <ExternalLink size={14} />
                     </div>
                 </a>
