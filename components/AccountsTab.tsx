@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { AccountItem, BaseItem, HistoryEntry } from '../types';
-import { Plus, Trash2, Wallet, ArrowRight, ArrowUpRight, Edit2, AlertCircle, X, Save } from 'lucide-react';
+import { Plus, Trash2, Wallet, ArrowRight, ArrowUpRight, Edit2, AlertCircle, X, Save, BookOpen, ExternalLink } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -217,6 +217,35 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
                 </form>
             </div>
         )}
+
+        {/* --- KNOWLEDGE SECTION --- */}
+        <div className="pt-8 border-t border-slate-200/60">
+            <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2 text-lg">
+                <BookOpen className="text-emerald-500" size={24} />
+                ידע זה כוח - מדריכים מקצועיים
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%94%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%94%D7%9E%D7%9C%D7%90-%D7%91%D7%AA%D7%A7%D7%95%D7%95%D7%94-%D7%9C%D7%A7%D7%A8%D7%9F-%D7%9B%D7%A1%D7%A4%D7%99%D7%AA" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full">קרן ביטחון</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">המדריך לקרן כספית</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            הכסף בבנק לא עושה כלום? הכירו את הקרן הכספית. האלטרנטיבה הנזילה והבטוחה לפיקדונות הבנקאיים, עם יתרונות מיסוי משמעותיים שיכולים להגדיל את החיסכון שלכם לחירום.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+            </div>
+        </div>
 
       </div>
 

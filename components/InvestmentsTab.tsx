@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { InvestmentItem, BaseItem, HistoryEntry, InvestmentHolding, CurrencyType } from '../types';
-import { Plus, Trash2, TrendingUp, BarChart, Bitcoin, FileText, Activity, ArrowRight, Percent, X, Edit2, AlertCircle, Layers, Save, ShoppingCart, DollarSign } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, BarChart, Bitcoin, FileText, Activity, ArrowRight, Percent, X, Edit2, AlertCircle, Layers, Save, ShoppingCart, DollarSign, BookOpen, ExternalLink } from 'lucide-react';
 import AssetModal from './AssetModal';
 import NumberInput from './NumberInput';
 
@@ -457,6 +457,75 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                 </form>
             </div>
         )}
+
+        {/* --- KNOWLEDGE SECTION --- */}
+        <div className="pt-8 border-t border-slate-200/60">
+            <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2 text-lg">
+                <BookOpen className="text-purple-500" size={24} />
+                ידע זה כוח - מדריכים מקצועיים
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/passiveportfolio" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-purple-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded-full">תיק השקעות</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-purple-700 transition-colors">בניית תיק השקעות מנצח</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            איך בונים תיק השקעות יציב במינימום מאמץ? המדריך המלא להשקעה פסיבית, חשיבות הקצאת הנכסים ופיזור סיכונים חכם לטווח הארוך.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-purple-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/allaboutfees" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full">חיסכון בעמלות</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-emerald-700 transition-colors">לא לפחד ממערכת המסחר</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            מעבר לחשבון מסחר עצמאי יכול לחסוך לכם אלפי שקלים בעמלות ודמי ניהול לאורך השנים. המדריך הפרקטי להבנת העלויות והפחתת הפחד מהמערכת.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-emerald-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+
+                <a 
+                    href="https://www.shirfinance.com/%D7%9E%D7%90%D7%9E%D7%A8%D7%99%D7%9D/%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%9C%D7%A7%D7%A8%D7%A0%D7%95%D7%AA-%D7%A1%D7%9C-%D7%90%D7%99%D7%A8%D7%99%D7%95%D7%AA-%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%95%D7%AA-%D7%95%D7%90%D7%9E%D7%A8%D7%99%D7%A7%D7%90%D7%99%D7%95%D7%AA" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition group flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded-full">מכשירים פיננסיים</span>
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-blue-700 transition-colors">המדריך לקרנות סל (ETFs)</h4>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            קרנות סל הן אבני הבניין של התיק הפסיבי. מה ההבדל בין קרן ישראלית, אירית או אמריקאית? ואיך הבחירה משפיעה על המיסוי שלכם?
+                        </p>
+                    </div>
+                    <div className="mt-4 flex items-center text-blue-600 text-sm font-bold gap-1">
+                        קראו עוד באתר <ExternalLink size={14} />
+                    </div>
+                </a>
+            </div>
+        </div>
 
         {/* Excellence Trade Banner - Moved to Bottom */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
