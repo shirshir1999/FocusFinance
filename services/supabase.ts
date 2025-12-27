@@ -1,47 +1,102 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@^2.39.0';
 
-// Explicitly access environment variables so Vite can statically replace them during build.
-// Dynamic access (e.g. env[key]) often fails in production builds.
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+// Safe access to environment variables
+const getEnv = (key: string) => {
+  try {
+    // @ts-ignore
+    return import.meta.env?.[key] || '';
+  } catch (e) {
+    return '';
+  }
+};
 
-let supabaseClient;
+const envUrl = getEnv('VITE_SUPABASE_URL');
+const envKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
-if (supabaseUrl && supabaseAnonKey) {
+// Check Local Storage for manual override
+const localUrl = typeof localStorage !== 'undefined' ? localStorage.getItem('custom_supabase_url') : '';
+const localKey = typeof localStorage !== 'undefined' ? localStorage.getItem('custom_supabase_key') : '';
+
+const supabaseUrl = envUrl || localUrl || '';
+const supabaseAnonKey = envKey || localKey || '';
+
+export const hasMissingKeys = !supabaseUrl || !supabaseAnonKey;
+
+export const clearCustomKeys = () => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('custom_supabase_url');
+        localStorage.removeItem('custom_supabase_key');
+        localStorage.removeItem('mock_session'); // Clear mock session on reset
+        window.location.reload();
+    }
+};
+
+let supabaseClient: any = null;
+
+// --- MOCK IMPLEMENTATION FOR LOCAL TESTING ---
+const mockAuth = {
+    getSession: async () => {
+        const stored = localStorage.getItem('mock_session');
+        return { data: { session: stored ? JSON.parse(stored) : null }, error: null };
+    },
+    onAuthStateChange: (callback: any) => {
+        // Simple mock subscription
+        return { data: { subscription: { unsubscribe: () => {} } } };
+    },
+    signInWithPassword: async ({ email }: any) => {
+        const user = { id: 'mock-user-id', email, user_metadata: { full_name: 'משתמש בדיקה' } };
+        const session = { user, access_token: 'mock-token' };
+        localStorage.setItem('mock_session', JSON.stringify(session));
+        return { data: { user, session }, error: null };
+    },
+    signUp: async ({ email, options }: any) => {
+        const user = { 
+            id: 'mock-user-id', 
+            email, 
+            user_metadata: { full_name: options?.data?.full_name || 'משתמש חדש' } 
+        };
+        const session = { user, access_token: 'mock-token' };
+        localStorage.setItem('mock_session', JSON.stringify(session));
+        return { data: { user, session }, error: null };
+    },
+    signInWithOAuth: async () => {
+        alert("במצב הדגמה מקומי, התחברות עם גוגל אינה פעילה. אנא השתמש באימייל וסיסמה רגילים.");
+        return { error: { message: "Not supported in mock mode" } };
+    },
+    signOut: async () => {
+        localStorage.removeItem('mock_session');
+        return { error: null };
+    },
+};
+
+if (!hasMissingKeys) {
   try {
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
   } catch (e) {
-    console.error("Failed to initialize Supabase client:", e);
+    console.error("❌ Failed to initialize Supabase client:", e);
   }
-}
-
-// Fallback mock client if Supabase is not configured or initialization failed
-if (!supabaseClient) {
-  console.warn("⚠️ Supabase keys are missing or invalid! App running in offline/demo mode. Auth will fail.");
+} else {
+  console.warn("⚠️ Supabase credentials missing. App running in LOCAL DEMO MODE.");
+  // Use Mock Client
   supabaseClient = {
-    auth: {
-      getSession: async () => ({ data: { session: null }, error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-      signInWithPassword: async () => ({ data: null, error: { message: "Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." } }),
-      signUp: async () => ({ data: null, error: { message: "Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." } }),
-      signInWithOAuth: async () => ({ data: null, error: { message: "Supabase not configured." } }),
-      signOut: async () => ({ error: null }),
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          single: async () => ({ data: null, error: null })
-        })
-      }),
-      upsert: async () => ({ error: { message: "Supabase not configured" } })
-    })
+      auth: mockAuth,
+      from: () => ({
+          select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: "Mock Mode" } }) }) }),
+          upsert: async () => ({ error: null })
+      })
   };
 }
 
-export const supabase = supabaseClient as any;
+export const supabase = supabaseClient;
 
+// Data persistence: Use Real Supabase OR Local Storage if keys missing
 export const saveUserData = async (userId: string, data: any) => {
-  if (!supabaseUrl) return;
+  if (hasMissingKeys) {
+      localStorage.setItem(`mock_data_${userId}`, JSON.stringify(data));
+      return;
+  }
+  
   const { error } = await supabase
     .from('user_data')
     .upsert({ 
@@ -53,14 +108,18 @@ export const saveUserData = async (userId: string, data: any) => {
 };
 
 export const fetchUserData = async (userId: string) => {
-  if (!supabaseUrl) return null;
+  if (hasMissingKeys) {
+      const local = localStorage.getItem(`mock_data_${userId}`);
+      return local ? JSON.parse(local) : null;
+  }
+
   const { data, error } = await supabase
     .from('user_data')
     .select('financial_json')
     .eq('id', userId)
     .single();
     
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" which is fine for new users
+  if (error && error.code !== 'PGRST116') { 
     console.error('Error fetching from cloud:', error);
     return null;
   }

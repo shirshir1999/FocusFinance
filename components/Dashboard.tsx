@@ -1,20 +1,29 @@
 
-import React, { useState, useMemo } from 'react';
-import { FinancialState, TabId, PensionItem, InvestmentItem, AccountItem, RealEstateItem, LoanItem, IncomeItem } from '../types';
+import React, { useMemo } from 'react';
+import { FinancialState, TabId, UserProfile, IncomeItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, ArrowLeftRight, Table, X } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, Table, Users, Edit2 } from 'lucide-react';
 
 interface DashboardProps {
   data: FinancialState;
   onNavigate: (view: TabId, params?: any) => void;
+  userName?: string;
+  onEditName: () => void;
+  activeProfileId: string;
+  profiles: UserProfile[];
 }
 
 const COLORS = ['#10B981', '#3B82F6', '#06B6D4', '#F59E0B', '#8B5CF6', '#6366F1'];
 
-const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
-  const [showHistoryTable, setShowHistoryTable] = useState(false);
+const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles }) => {
+  
+  // Helper to find profile info
+  const getProfile = (id?: string) => profiles.find(p => p.id === id);
 
   // --- Calculations ---
+  // Data passed here is already filtered by App.tsx, so we can just sum it up.
+  // HOWEVER, for the "Owner Badge" logic, we need to know who owns what.
+  
   const checkingTotal = data.accounts.filter(a => a.type !== 'emergency').reduce((sum, item) => sum + item.value, 0);
   const emergencyTotal = data.accounts.filter(a => a.type === 'emergency').reduce((sum, item) => sum + item.value, 0);
   
@@ -36,7 +45,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
   const netWorth = totalAssets - totalMortgage - totalLoans;
 
   // Cash Flow
-  // Added explicit types to reduce function parameters to fix 'unknown' inference error
   const monthlyIncome = (data.cashFlow?.monthlyIncome || 0) + (data.cashFlow?.additionalIncomes?.reduce((s: number, i: IncomeItem) => s + i.amount, 0) || 0);
   
   const rawRealEstateIncome = data.realEstate.reduce((sum, r) => sum + (r.monthlyRent || 0), 0);
@@ -59,8 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
   if (data.cashFlow?.expensesMode === 'simple') {
       totalExpenses = data.cashFlow.generalExpense;
   } else {
-      // Explicitly typed reduction to avoid 'unknown' type errors from Object.values
-      // Fixed: Cast the result of Object.values to number[] as detailedExpenses is Record<string, number>
       totalExpenses = (Object.values(data.cashFlow?.detailedExpenses || {}) as number[]).reduce((a: number, b: number) => a + b, 0);
   }
   
@@ -124,7 +130,12 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
       {/* Header Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tight">שלום, שיר</h2>
+            <div className="flex items-center gap-3 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם">
+                <h2 className="text-3xl font-black text-slate-800 tracking-tight">שלום, {userName || 'אורח'}</h2>
+                <div className="bg-slate-100 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200">
+                    <Edit2 size={16} className="text-slate-500" />
+                </div>
+            </div>
             <p className="text-slate-500">הנה תמונת המצב הפיננסית שלך להיום</p>
           </div>
           <div className="flex flex-wrap gap-3 items-center">
@@ -136,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
              <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
              
              <button onClick={() => onNavigate('switching_calc')} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-full hover:bg-slate-50 transition text-sm font-bold shadow-sm">
-                 <ArrowLeftRight size={16} />
+                 <ArrowRightLeft size={16} />
                  <span>בדיקת כדאיות מעבר</span>
              </button>
              <button onClick={() => onNavigate('pension_calc')} className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-full hover:bg-slate-50 transition text-sm font-bold shadow-sm">
@@ -206,7 +217,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
             <div className="flex justify-between items-start mb-6">
                 <h2 className="text-lg font-bold text-slate-700">התקדמות כלכלית</h2>
                 <button 
-                    onClick={() => setShowHistoryTable(true)}
+                    onClick={() => onNavigate('history_view')}
                     className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition"
                 >
                     <Table size={16} />
@@ -281,6 +292,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
             total={pensionTotal}
             items={data.pensions.filter(p => p.type === 'pension' || p.type === 'provident_fund')}
             onClick={() => onNavigate('pension', { type: 'pension' })}
+            activeProfileId={activeProfileId}
+            getProfile={getProfile}
          />
          <DetailedCard 
             title='קרן השתלמות'
@@ -289,6 +302,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
             total={studyFundTotal}
             items={data.pensions.filter(p => p.type === 'study_fund')}
             onClick={() => onNavigate('pension', { type: 'study_fund' })}
+            activeProfileId={activeProfileId}
+            getProfile={getProfile}
          />
          <DetailedCard 
             title='תיק השקעות'
@@ -297,6 +312,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
             total={investmentsTotal}
             items={data.investments}
             onClick={() => onNavigate('investments')}
+            activeProfileId={activeProfileId}
+            getProfile={getProfile}
          />
       </div>
 
@@ -321,159 +338,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate }) => {
             footer={<span className="text-xs text-slate-400">החזר חודשי כולל: {formatCurrency(totalLoanPayments)}</span>}
         />
       </div>
-
-      {showHistoryTable && (
-          <HistoryTableModal 
-            data={data} 
-            onClose={() => setShowHistoryTable(false)} 
-            formatCurrency={formatCurrency}
-          />
-      )}
     </div>
   );
-};
-
-// History Table Component
-const HistoryTableModal: React.FC<{ 
-    data: FinancialState; 
-    onClose: () => void;
-    formatCurrency: (val: number) => string;
-}> = ({ data, onClose, formatCurrency }) => {
-    
-    // 1. Collect all assets with Type Label
-    const getAssetLabel = (item: any, category: string) => {
-        if (category === 'pensions') {
-            if (item.type === 'pension') return 'פנסיה';
-            if (item.type === 'study_fund') return 'השתלמות';
-            return 'גמל';
-        }
-        if (category === 'accounts') {
-            if (item.type === 'checking') return 'עו"ש';
-            if (item.type === 'emergency') return 'ביטחון';
-            return 'חיסכון';
-        }
-        if (category === 'investments') return 'השקעות';
-        if (category === 'realEstate') return 'נדל"ן';
-        return 'נכס';
-    };
-
-    const allAssets = [
-        ...data.accounts.map(i => ({...i, label: getAssetLabel(i, 'accounts')})),
-        ...data.pensions.map(i => ({...i, label: getAssetLabel(i, 'pensions')})),
-        ...data.investments.map(i => ({...i, label: getAssetLabel(i, 'investments')})),
-        ...data.realEstate.map(i => ({...i, label: getAssetLabel(i, 'realEstate')}))
-    ];
-
-    // 2. Collect all unique dates from all history
-    const allDates = new Set<string>();
-    allAssets.forEach(asset => {
-        if (asset.history) {
-            asset.history.forEach(h => allDates.add(h.date));
-        }
-        // Also add current update date if exists
-        if (asset.lastUpdated) {
-            allDates.add(asset.lastUpdated.split('T')[0]);
-        }
-    });
-    // Ensure today is there if we have assets but no history yet
-    if (allDates.size === 0 && allAssets.length > 0) {
-        allDates.add(new Date().toISOString().split('T')[0]);
-    }
-
-    const sortedDates = Array.from(allDates).sort().reverse(); // Newest first
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in overflow-hidden">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-full md:h-[90vh] flex flex-col overflow-hidden">
-                <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
-                    <div>
-                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                            <Table className="text-slate-500" />
-                            טבלת מעקב שווי
-                        </h2>
-                        <p className="text-slate-500 text-xs">פירוט היסטורי של כלל הנכסים</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition">
-                        <X size={24} className="text-slate-500" />
-                    </button>
-                </div>
-                
-                <div className="flex-1 overflow-auto custom-scrollbar p-4">
-                    <table className="w-full text-sm text-right border-collapse">
-                        <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm text-slate-500">
-                            <tr>
-                                <th className="p-3 border-b border-slate-200 font-bold whitespace-nowrap min-w-[100px]">תאריך</th>
-                                <th className="p-3 border-b border-slate-200 font-black text-slate-800 whitespace-nowrap min-w-[120px]">סה"כ שווי</th>
-                                <th className="p-3 border-b border-slate-200 font-bold text-slate-500 whitespace-nowrap min-w-[100px]">שינוי מעדכון קודם</th>
-                                {allAssets.map(asset => (
-                                    <th key={asset.id} className="p-3 border-b border-slate-200 font-medium whitespace-nowrap min-w-[140px]" title={asset.name}>
-                                        <div className="flex flex-col">
-                                            <span className="truncate max-w-[140px] font-bold text-slate-700">{asset.name}</span>
-                                            <span className="text-[10px] text-slate-400 font-normal">{asset.label}</span>
-                                        </div>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {sortedDates.map((date, index) => {
-                                let totalForDate = 0;
-                                let totalForPrevDate = 0;
-                                const prevDate = sortedDates[index + 1];
-
-                                // Calculate total logic: Sum of specific history OR carry forward last known value
-                                allAssets.forEach(asset => {
-                                    // Try to find exact match
-                                    const exactEntry = asset.history?.find(h => h.date === date);
-                                    if (exactEntry) {
-                                        totalForDate += exactEntry.value;
-                                    } else {
-                                        // Find most recent entry BEFORE this date
-                                        const pastEntries = asset.history?.filter(h => h.date < date).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                                        if (pastEntries && pastEntries.length > 0) {
-                                            totalForDate += pastEntries[0].value;
-                                        }
-                                    }
-
-                                    if(prevDate) {
-                                        const prevEntry = asset.history?.find(h => h.date === prevDate);
-                                        if (prevEntry) {
-                                            totalForPrevDate += prevEntry.value;
-                                        } else {
-                                            const prevPastEntries = asset.history?.filter(h => h.date < prevDate).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                                            if (prevPastEntries && prevPastEntries.length > 0) {
-                                                totalForPrevDate += prevPastEntries[0].value;
-                                            }
-                                        }
-                                    }
-                                });
-
-                                const totalChange = prevDate ? totalForDate - totalForPrevDate : 0;
-
-                                return (
-                                    <tr key={date} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-3 font-mono text-slate-500">{new Date(date).toLocaleDateString('he-IL')}</td>
-                                        <td className="p-3 font-mono font-black text-slate-800 bg-slate-50/50">{formatCurrency(totalForDate)}</td>
-                                        <td className={`p-3 font-mono font-bold ${totalChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                            {prevDate ? (totalChange > 0 ? `+${formatCurrency(totalChange)}` : formatCurrency(totalChange)) : '-'}
-                                        </td>
-                                        {allAssets.map(asset => {
-                                            const entry = asset.history?.find(h => h.date === date);
-                                            return (
-                                                <td key={asset.id} className="p-3 font-mono text-slate-600 border-r border-slate-50">
-                                                    {entry ? formatCurrency(entry.value) : ''}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
 };
 
 // Simple Card
@@ -512,9 +378,11 @@ const DetailedCard: React.FC<{
     icon: React.ReactNode;
     colorClass: string;
     total: number;
-    items: (PensionItem | InvestmentItem)[];
+    items: any[];
     onClick: () => void;
-}> = ({ title, icon, colorClass, total, items, onClick }) => {
+    activeProfileId: string;
+    getProfile: (id?: string) => UserProfile | undefined;
+}> = ({ title, icon, colorClass, total, items, onClick, activeProfileId, getProfile }) => {
     const topItems = [...items].sort((a,b) => b.value - a.value).slice(0, 2);
 
     return (
@@ -530,14 +398,29 @@ const DetailedCard: React.FC<{
             </div>
 
             <div className="w-full mt-4 space-y-3">
-                {topItems.length > 0 ? topItems.map(item => (
+                {topItems.length > 0 ? topItems.map(item => {
+                    const owner = getProfile(item.ownerId);
+                    
+                    return (
                     <div key={item.id} className="bg-slate-50/50 p-2 rounded-lg text-right w-full text-sm">
-                        <div className="flex justify-between font-bold text-slate-700">
-                            <span>{item.name}</span>
+                        <div className="flex justify-between items-start font-bold text-slate-700">
+                            <span className="truncate max-w-[60%]">{item.name}</span>
                             <span>₪{Number(item.value / 1000).toFixed(0)}k</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                             {'track' in item && item.track && <span className="bg-white px-1.5 py-0.5 rounded border border-slate-100">{item.track}</span>}
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
+                             {/* Badge for Owner (Only if viewing 'All' and not shared, or explicit logic) */}
+                             {activeProfileId === 'all' && (
+                                <span 
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold text-white flex items-center gap-1`}
+                                    style={{ backgroundColor: item.isShared ? '#64748b' : (owner?.color || '#94a3b8') }}
+                                >
+                                    {item.isShared ? <Users size={8}/> : <User size={8}/>}
+                                    {item.isShared ? 'משותף' : (owner?.name || '')}
+                                </span>
+                             )}
+
+                             {'track' in item && item.track && <span className="bg-white px-1.5 py-0.5 rounded border border-slate-100 truncate max-w-[100px]">{item.track}</span>}
+                             
                              {'managementFeeAccumulation' in item && item.managementFeeAccumulation !== undefined && (
                                  <div className="flex items-center gap-2">
                                      <span className="flex items-center gap-0.5">
@@ -548,7 +431,7 @@ const DetailedCard: React.FC<{
                              )}
                         </div>
                     </div>
-                )) : <div className="text-xs text-slate-400 p-2">אין נכסים להצגה</div>}
+                )}) : <div className="text-xs text-slate-400 p-2">אין נכסים להצגה</div>}
                 
                 {items.length > 2 && <div className="text-xs text-slate-400 w-full text-center">+ עוד {items.length - 2} מוצרים</div>}
             </div>

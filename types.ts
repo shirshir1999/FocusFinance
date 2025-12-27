@@ -1,6 +1,13 @@
 
-export type TabId = 'dashboard' | 'accounts' | 'pension' | 'investments' | 'realestate' | 'loans' | 'cashflow' | 'feecalc' | 'pension_calc' | 'switching_calc' | 'future_projection';
+export type TabId = 'dashboard' | 'accounts' | 'pension' | 'investments' | 'realestate' | 'loans' | 'cashflow' | 'feecalc' | 'pension_calc' | 'switching_calc' | 'future_projection' | 'history_view';
 export type AssetCategory = 'accounts' | 'pensions' | 'investments' | 'realEstate' | 'loans';
+
+export interface UserProfile {
+    id: string;
+    name: string;
+    color: string; // Hex color for UI badges
+    isMainUser?: boolean;
+}
 
 export interface HistoryEntry {
   date: string; // ISO Date string
@@ -15,6 +22,10 @@ export interface BaseItem {
   value: number; // For Loans: Remaining Balance. For RealEstate: Asset Value.
   history?: HistoryEntry[];
   lastUpdated?: string;
+  
+  // Multi-User Support
+  ownerId?: string; // ID of the profile who owns this
+  isShared?: boolean; // If true, appears for everyone
 }
 
 export interface AccountItem extends BaseItem {
@@ -80,8 +91,8 @@ export interface RealEstateItem extends BaseItem {
 export interface LoanItem extends BaseItem {
     source: string; // Bank name / Entity
     purpose: string; // Car, Renovation, etc.
-    loanType: 'spitzer' | 'balloon'; // New
-    durationMonths: number; // New
+    loanType: 'spitzer' | 'balloon_full' | 'balloon_partial'; // Updated types
+    durationMonths: number;
     originalAmount: number;
     monthlyPayment: number;
     interestRate: number;
@@ -105,6 +116,7 @@ export interface CashFlowState {
 }
 
 export interface FinancialState {
+  profiles?: UserProfile[]; // List of people
   accounts: AccountItem[];
   pensions: PensionItem[];
   investments: InvestmentItem[];
