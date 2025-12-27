@@ -11,10 +11,10 @@ interface FutureProjectionProps {
 }
 
 const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) => {
-  const [rate, setRate] = useState(8);
-  const [inflation, setInflation] = useState(2);
-  const [years, setYears] = useState(20);
-  const [totalMonthlyDeposit, setTotalMonthlyDeposit] = useState(0);
+  const [rate, setRate] = useState<string>(''); // Default 8 if empty
+  const [inflation, setInflation] = useState<string>(''); // Default 2 if empty
+  const [years, setYears] = useState<string>(''); // Default 20 if empty
+  const [totalMonthlyDeposit, setTotalMonthlyDeposit] = useState<string>('');
   
   const allAssets = [
       ...data.pensions.map(p => ({ ...p, category: 'פנסיה', isIncluded: true, type: 'pension' })),
@@ -25,11 +25,12 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
 
   const [selectedAssets, setSelectedAssets] = useState(allAssets);
 
+  // Auto-calc total deposit on load or selection change
   useEffect(() => {
       const sumDeposits = selectedAssets
         .filter(a => a.isIncluded)
         .reduce((sum, a) => sum + (a.monthlyDeposit || 0), 0);
-      setTotalMonthlyDeposit(sumDeposits);
+      if(sumDeposits > 0) setTotalMonthlyDeposit(sumDeposits.toString());
   }, [selectedAssets]);
 
   const toggleAsset = (id: string) => {
@@ -45,11 +46,16 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
       let currentReal = startingCapital;
       
       // Rates
-      const r_nominal = rate / 100;
-      const r_inflation = inflation / 100;
+      const numRate = rate === '' ? 8.0 : Number(rate);
+      const numInf = inflation === '' ? 2.0 : Number(inflation);
+      const numYears = years === '' ? 20 : Number(years);
+      const numDeposit = Number(totalMonthlyDeposit) || 0;
+
+      const r_nominal = numRate / 100;
+      const r_inflation = numInf / 100;
       const r_real = (1 + r_nominal) / (1 + r_inflation) - 1;
 
-      for (let i = 0; i <= years; i++) {
+      for (let i = 0; i <= numYears; i++) {
           yearlyData.push({
               year: currentYear + i,
               nominal: Math.round(currentNominal),
@@ -57,7 +63,7 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
           });
 
           // Nominal Calc
-          const annualContribution = totalMonthlyDeposit * 12;
+          const annualContribution = numDeposit * 12;
           currentNominal = (currentNominal * (1 + r_nominal)) + annualContribution;
 
           // Real Calc - Assuming Nominal Contribution grows with inflation (Salary Indexation)
@@ -71,13 +77,13 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
   const chartData = calculateData();
   const finalNominal = chartData[chartData.length - 1].nominal;
   const finalReal = chartData[chartData.length - 1].real;
+  const numYearsDisplay = years === '' ? 20 : Number(years);
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(val);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in overflow-hidden">
-        {/* Updated Width to max-w-6xl and height to fixed md:h-[90vh] */}
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-full md:h-[90vh] flex flex-col overflow-hidden">
             <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
                 <div>
@@ -103,9 +109,10 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                                 <input 
                                     type="number" 
                                     value={rate}
-                                    onChange={(e) => setRate(Number(e.target.value))}
+                                    onChange={(e) => setRate(e.target.value)}
                                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
                                     step="0.1"
+                                    placeholder="8.0"
                                 />
                             </div>
                             <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
@@ -113,9 +120,10 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                                 <input 
                                     type="number" 
                                     value={inflation}
-                                    onChange={(e) => setInflation(Number(e.target.value))}
+                                    onChange={(e) => setInflation(e.target.value)}
                                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
                                     step="0.1"
+                                    placeholder="2.0"
                                 />
                             </div>
                         </div>
@@ -125,8 +133,9 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                              <div className="relative">
                                 <NumberInput 
                                     value={totalMonthlyDeposit}
-                                    onChange={(val) => setTotalMonthlyDeposit(val)}
+                                    onChange={setTotalMonthlyDeposit}
                                     className="w-full p-2 md:p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-lg"
+                                    placeholder="0"
                                 />
                                 <div className="absolute left-3 top-3 text-emerald-600" title="חושב אוטומטית">
                                     <RefreshCw size={16} />
@@ -135,21 +144,22 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                         </div>
 
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                             <label className="block text-sm font-bold text-slate-700 mb-2">טווח שנים: {years}</label>
+                             <label className="block text-sm font-bold text-slate-700 mb-2">טווח שנים: {numYearsDisplay}</label>
                              <div className="flex items-center gap-3">
                                  <input 
                                     type="range" 
                                     min="5" 
                                     max="100"
-                                    value={years}
-                                    onChange={(e) => setYears(Number(e.target.value))}
+                                    value={numYearsDisplay}
+                                    onChange={(e) => setYears(e.target.value)}
                                     className="flex-1 accent-emerald-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
                                  />
                                  <input 
                                     type="number" 
                                     value={years}
-                                    onChange={(e) => setYears(Number(e.target.value))}
-                                    className="w-16 p-1 border rounded text-center"
+                                    onChange={(e) => setYears(e.target.value)}
+                                    className="w-16 p-1 border rounded text-center outline-none"
+                                    placeholder="20"
                                  />
                              </div>
                         </div>
@@ -183,7 +193,7 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                 <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[300px]">
                      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 md:mb-8 gap-2 flex-shrink-0">
                          <div>
-                             <p className="text-slate-500 font-medium text-xs md:text-sm">סכום חזוי בעוד {years} שנים</p>
+                             <p className="text-slate-500 font-medium text-xs md:text-sm">סכום חזוי בעוד {numYearsDisplay} שנים</p>
                              <div className="flex items-baseline gap-3">
                                 <h3 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">{formatCurrency(finalNominal)}</h3>
                                 <span className="text-sm font-bold text-emerald-600">({formatCurrency(finalReal)} ריאלי)</span>

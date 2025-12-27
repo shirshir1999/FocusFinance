@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Calculator, ArrowRight, Percent, Info } from 'lucide-react';
+import { X, Calculator } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import NumberInput from './NumberInput';
 
@@ -10,18 +10,18 @@ interface FeeCalculatorProps {
 }
 
 const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) => {
-  const [balance, setBalance] = useState(100000);
-  const [monthlyDeposit, setMonthlyDeposit] = useState(2000);
-  const [years, setYears] = useState(20);
-  const [returnRate, setReturnRate] = useState(5);
+  const [balance, setBalance] = useState('');
+  const [monthlyDeposit, setMonthlyDeposit] = useState('');
+  const [years, setYears] = useState('');
+  const [returnRate, setReturnRate] = useState('');
 
   // Option A (Existing)
-  const [feeAccA, setFeeAccA] = useState(initialFees ? initialFees.acc : 0.22);
-  const [feeDepA, setFeeDepA] = useState(initialFees ? initialFees.dep : 1.0);
+  const [feeAccA, setFeeAccA] = useState(initialFees ? initialFees.acc.toString() : '');
+  const [feeDepA, setFeeDepA] = useState(initialFees ? initialFees.dep.toString() : '');
 
   // Option B (Low Fee Alternative)
-  const [feeAccB, setFeeAccB] = useState(0.1);
-  const [feeDepB, setFeeDepB] = useState(1.0);
+  const [feeAccB, setFeeAccB] = useState('');
+  const [feeDepB, setFeeDepB] = useState('');
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [diff, setDiff] = useState(0);
@@ -33,39 +33,51 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
   const [finalB, setFinalB] = useState(0);
 
   useEffect(() => {
+    // Defaults logic to match placeholders
+    const numBalance = balance === '' ? 100000 : Number(balance);
+    const numDeposit = monthlyDeposit === '' ? 2000 : Number(monthlyDeposit);
+    const numYears = years === '' ? 20 : Number(years);
+    const numReturn = returnRate === '' ? 5.0 : Number(returnRate);
+    
+    const numFeeAccA = feeAccA === '' ? 0.22 : Number(feeAccA);
+    const numFeeDepA = feeDepA === '' ? 1.0 : Number(feeDepA);
+    
+    const numFeeAccB = feeAccB === '' ? 0.1 : Number(feeAccB);
+    const numFeeDepB = feeDepB === '' ? 1.0 : Number(feeDepB);
+
     const data = [];
-    let currentA = balance;
-    let currentB = balance;
+    let currentA = numBalance;
+    let currentB = numBalance;
     let feesPaidA = 0;
     let feesPaidB = 0;
 
-    for (let i = 0; i <= years; i++) {
+    for (let i = 0; i <= numYears; i++) {
         data.push({
             year: i,
             optionA: Math.round(currentA),
             optionB: Math.round(currentB),
         });
 
-        if (i < years) {
+        if (i < numYears) {
             // Calculate next year
-            const r = returnRate / 100;
-            const annualDep = monthlyDeposit * 12;
+            const r = numReturn / 100;
+            const annualDep = numDeposit * 12;
 
             // Option A
-            const depFeeA = annualDep * (feeDepA / 100);
+            const depFeeA = annualDep * (numFeeDepA / 100);
             const netDepA = annualDep - depFeeA;
             // Simple interest approximation
             const growthA = (currentA + netDepA / 2) * r; 
-            const accFeeA = (currentA + netDepA + growthA) * (feeAccA / 100);
+            const accFeeA = (currentA + netDepA + growthA) * (numFeeAccA / 100);
             
             feesPaidA += depFeeA + accFeeA;
             currentA = currentA + netDepA + growthA - accFeeA;
 
             // Option B
-            const depFeeB = annualDep * (feeDepB / 100);
+            const depFeeB = annualDep * (numFeeDepB / 100);
             const netDepB = annualDep - depFeeB;
             const growthB = (currentB + netDepB / 2) * r;
-            const accFeeB = (currentB + netDepB + growthB) * (feeAccB / 100);
+            const accFeeB = (currentB + netDepB + growthB) * (numFeeAccB / 100);
             
             feesPaidB += depFeeB + accFeeB;
             currentB = currentB + netDepB + growthB - accFeeB;
@@ -84,7 +96,6 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in overflow-hidden">
-        {/* Updated Width to max-w-6xl and height to fixed md:h-[90vh] */}
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-full md:h-[90vh] flex flex-col overflow-hidden">
             <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
                 <div>
@@ -98,28 +109,28 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden bg-slate-50">
                 {/* Inputs */}
-                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 lg:overflow-y-auto custom-scrollbar space-y-4 md:space-y-6 flex-shrink-0">
+                <div className="w-full lg:w-1/3 p-4 md:p-6 lg:overflow-y-auto custom-scrollbar space-y-4 md:space-y-6 flex-shrink-0 border-l border-slate-100">
                     
                     <div className="space-y-3">
                         <h3 className="font-bold text-slate-800 text-sm md:text-base">נתוני בסיס</h3>
                         <div className="grid grid-cols-2 gap-2 md:gap-3">
                             <div>
                                 <label className="text-[10px] md:text-xs font-bold text-slate-500">צבירה</label>
-                                <NumberInput value={balance} onChange={setBalance} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
+                                <NumberInput value={balance} onChange={setBalance} className="w-full p-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500" placeholder="100,000" />
                             </div>
                             <div>
                                 <label className="text-[10px] md:text-xs font-bold text-slate-500">הפקדה</label>
-                                <NumberInput value={monthlyDeposit} onChange={setMonthlyDeposit} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
+                                <NumberInput value={monthlyDeposit} onChange={setMonthlyDeposit} className="w-full p-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500" placeholder="2,000" />
                             </div>
                             <div>
                                 <label className="text-[10px] md:text-xs font-bold text-slate-500">תשואה %</label>
-                                <input type="number" value={returnRate} onChange={e => setReturnRate(Number(e.target.value))} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
+                                <input type="number" value={returnRate} onChange={e => setReturnRate(e.target.value)} className="w-full p-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500" placeholder="5.0" />
                             </div>
                              <div>
                                 <label className="text-[10px] md:text-xs font-bold text-slate-500">שנים</label>
-                                <input type="number" value={years} onChange={e => setYears(Number(e.target.value))} className="w-full p-2 rounded-lg border border-slate-200 text-sm" />
+                                <input type="number" value={years} onChange={e => setYears(e.target.value)} className="w-full p-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500" placeholder="20" />
                             </div>
                         </div>
                     </div>
@@ -129,11 +140,11 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                         <div className="grid grid-cols-2 gap-3 mb-2">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500">מצבירה %</label>
-                                <input type="number" step="0.01" value={feeAccA} onChange={e => setFeeAccA(Number(e.target.value))} className="w-full p-1.5 rounded-lg border border-slate-200 bg-red-50 text-sm" />
+                                <input type="number" step="0.01" value={feeAccA} onChange={e => setFeeAccA(e.target.value)} className="w-full p-1.5 rounded-lg border border-slate-200 bg-red-50 text-sm outline-none focus:border-red-400" placeholder="0.22" />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500">מהפקדה %</label>
-                                <input type="number" step="0.01" value={feeDepA} onChange={e => setFeeDepA(Number(e.target.value))} className="w-full p-1.5 rounded-lg border border-slate-200 bg-red-50 text-sm" />
+                                <input type="number" step="0.01" value={feeDepA} onChange={e => setFeeDepA(e.target.value)} className="w-full p-1.5 rounded-lg border border-slate-200 bg-red-50 text-sm outline-none focus:border-red-400" placeholder="1.0" />
                             </div>
                         </div>
                         <div className="text-[10px] text-red-400 bg-red-50 p-1.5 rounded flex justify-between">
@@ -147,11 +158,11 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                         <div className="grid grid-cols-2 gap-3 mb-2">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500">מצבירה %</label>
-                                <input type="number" step="0.01" value={feeAccB} onChange={e => setFeeAccB(Number(e.target.value))} className="w-full p-1.5 rounded-lg border border-slate-200 bg-emerald-50 text-sm" />
+                                <input type="number" step="0.01" value={feeAccB} onChange={e => setFeeAccB(e.target.value)} className="w-full p-1.5 rounded-lg border border-slate-200 bg-emerald-50 text-sm outline-none focus:border-emerald-400" placeholder="0.1" />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500">מהפקדה %</label>
-                                <input type="number" step="0.01" value={feeDepB} onChange={e => setFeeDepB(Number(e.target.value))} className="w-full p-1.5 rounded-lg border border-slate-200 bg-emerald-50 text-sm" />
+                                <input type="number" step="0.01" value={feeDepB} onChange={e => setFeeDepB(e.target.value)} className="w-full p-1.5 rounded-lg border border-slate-200 bg-emerald-50 text-sm outline-none focus:border-emerald-400" placeholder="1.0" />
                             </div>
                         </div>
                         <div className="text-[10px] text-emerald-600 bg-emerald-50 p-1.5 rounded flex justify-between">
@@ -163,9 +174,9 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                 </div>
 
                 {/* Results */}
-                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[300px]">
+                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-y-auto custom-scrollbar">
                      
-                     <div className="grid grid-cols-2 gap-4 mb-4">
+                     <div className="grid grid-cols-2 gap-4 mb-4 flex-shrink-0">
                          <div className="bg-slate-50 p-4 rounded-2xl border border-red-100/50 text-center">
                              <div className="text-xs text-red-500 font-bold mb-1">אפשרות א'</div>
                              <div className="text-xl font-black text-slate-700">{formatCurrency(finalA)}</div>
@@ -183,8 +194,8 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                         </div>
                      </div>
 
-                     <div className="flex-1 w-full relative">
-                        <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                     <div className="flex-1 w-full relative min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="colorA" x1="0" y1="0" x2="0" y2="1">

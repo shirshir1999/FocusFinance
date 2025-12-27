@@ -1,67 +1,59 @@
-import React, { useState, useEffect } from 'react';
 
-interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+import React from 'react';
+
+interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   value: number | string;
-  onChange: (value: number) => void;
+  onChange: (value: string) => void; 
   className?: string;
 }
 
 const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, className, onFocus, onBlur, ...props }) => {
-  // Internal state for the display string (with commas)
-  const [displayValue, setDisplayValue] = useState('');
-
-  useEffect(() => {
-    // When prop value changes externally, update display unless currently editing?
-    // For simplicity, we sync on blur or when value changes significantly
-    if (value === 0 || value === '0') {
-       setDisplayValue('0');
-    } else if (value) {
-       setDisplayValue(Number(value).toLocaleString());
-    } else {
-       setDisplayValue('');
-    }
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/,/g, '');
-    if (raw === '') {
-        setDisplayValue('');
-        onChange(0);
-        return;
-    }
-    if (!isNaN(Number(raw))) {
-        setDisplayValue(raw); // Show raw while typing
-        onChange(Number(raw));
-    }
+  
+  const getDisplayValue = (val: string | number) => {
+      if (val === '' || val === undefined || val === null) return '';
+      const strVal = val.toString();
+      if (strVal.endsWith('.')) return strVal;
+      if (strVal === '-') return strVal;
+      
+      const num = Number(strVal);
+      if (isNaN(num)) return '';
+      return num.toLocaleString();
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      const raw = e.target.value.replace(/,/g, '');
-      if (raw && !isNaN(Number(raw))) {
-          setDisplayValue(Number(raw).toLocaleString());
-      }
-      if (onBlur) onBlur(e);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/,/g, ''); 
+    
+    if (raw === '') {
+        onChange('');
+        return;
+    }
+
+    if (!/^-?\d*\.?\d*$/.test(raw)) {
+        return; 
+    }
+
+    let cleanRaw = raw;
+    if (cleanRaw.length > 1 && cleanRaw.startsWith('0') && !cleanRaw.startsWith('0.')) {
+        cleanRaw = cleanRaw.replace(/^0+/, '');
+    }
+    
+    onChange(cleanRaw);
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      // Clear if 0 to avoid annoying deletion
-      if (displayValue === '0') {
-          setDisplayValue('');
-      } else {
-          // Remove commas for editing
-          setDisplayValue(displayValue.replace(/,/g, ''));
-      }
+      // Auto-select text on click for easy overwrite
+      e.target.select();
       if (onFocus) onFocus(e);
   };
 
   return (
     <input
-      type="text" // Use text to allow commas
+      type="text"
       inputMode="decimal"
-      value={displayValue}
+      value={getDisplayValue(value)}
       onChange={handleChange}
-      onBlur={handleBlur}
       onFocus={handleFocus}
+      onBlur={onBlur}
       className={className}
       {...props}
     />
