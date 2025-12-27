@@ -63,15 +63,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           <div className="space-y-3 mb-10 text-right px-4">
               <div className="flex items-center gap-3 text-slate-600">
                   <CheckCircle2 size={20} className="text-emerald-500 flex-shrink-0" />
-                  <span>ריכוז כל הנכסים וההתחייבויות במקום אחד</span>
+                  <span>סדר וריכוז כל הנכסים במקום אחד</span>
               </div>
               <div className="flex items-center gap-3 text-slate-600">
                   <CheckCircle2 size={20} className="text-emerald-500 flex-shrink-0" />
-                  <span>ניתוח תזרים מזומנים חכם</span>
+                  <span>מעקב ידני ללא התחברות לממשקים חיצוניים</span>
               </div>
               <div className="flex items-center gap-3 text-slate-600">
                   <CheckCircle2 size={20} className="text-emerald-500 flex-shrink-0" />
-                  <span>סימולציות פרישה וחיסכון בעלויות</span>
+                  <span>מעקב התקדמות כלכלית וביצוע תחזיות לעתיד</span>
+              </div>
+              <div className="flex items-center gap-3 text-slate-600">
+                  <CheckCircle2 size={20} className="text-emerald-500 flex-shrink-0" />
+                  <span>מחשבונים חכמים לתכנון פרישה וחיסכון בעלויות</span>
               </div>
           </div>
 
