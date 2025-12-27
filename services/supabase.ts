@@ -1,20 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@^2.39.0';
 
-// Safely access environment variables
-const getEnv = (key: string) => {
-  // Check import.meta.env (Vite)
-  if (typeof (import.meta as any) !== 'undefined' && (import.meta as any).env) {
-    return (import.meta as any).env[key] || '';
-  }
-  // Check process.env (Webpack/Node)
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env[key] || '';
-  }
-  return '';
-};
-
-const supabaseUrl = getEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
+// Explicitly access environment variables so Vite can statically replace them during build.
+// Dynamic access (e.g. env[key]) often fails in production builds.
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 
 let supabaseClient;
 
