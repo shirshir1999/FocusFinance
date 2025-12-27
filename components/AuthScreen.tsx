@@ -71,25 +71,25 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
           
           {/* RIGHT SIDE: Login Form (Compact) */}
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 animate-fade-in text-center mx-auto w-full max-w-lg lg:max-w-full flex flex-col justify-center h-auto lg:h-[680px]">
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100 animate-fade-in text-center mx-auto w-full max-w-lg lg:max-w-full flex flex-col justify-between h-auto lg:h-[680px]">
               
-              <div className="mb-6">
-                  <div className="inline-block transform hover:scale-105 transition duration-500 bg-white p-3 rounded-2xl shadow-sm border border-slate-50">
-                    <TreeLogo className="w-16 h-16 mx-auto drop-shadow-sm" />
+              <div className="mb-4">
+                  <div className="inline-block transform hover:scale-105 transition duration-500 bg-white p-3 rounded-2xl shadow-sm border border-slate-50 mb-2">
+                    <TreeLogo className="w-14 h-14 mx-auto drop-shadow-sm" />
                   </div>
-                  <h1 className="text-4xl font-black text-slate-900 tracking-tight mt-4 mb-1">פוקוס פיננסי</h1>
+                  <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-1">פוקוס פיננסי</h1>
                   <p className="text-slate-500 font-medium text-lg">סדר ושליטה בחיים הפיננסיים</p>
                   <p className="text-slate-400 text-sm font-medium mt-1">שיר כהן - תכנון פיננסי</p>
               </div>
 
               {/* Login Button */}
-              <div className="space-y-3 mb-8 w-full max-w-sm mx-auto">
+              <div className="space-y-2 mb-6 w-full max-w-sm mx-auto">
                 <button 
                   onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 group relative overflow-hidden"
+                  className="w-full flex items-center justify-center gap-3 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                  <Chrome size={22} className="text-white relative z-10" />
+                  <Chrome size={20} className="text-white relative z-10" />
                   <span className="font-bold text-lg relative z-10">התחברות עם Google</span>
                 </button>
                 
@@ -105,23 +105,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 </div>
               )}
 
-              {/* Benefits List - Updated Style for Maximum Size */}
-              <div className="space-y-5 text-right px-2 flex-1 flex flex-col justify-center">
-                  <div className="flex items-start gap-5 text-slate-900 bg-white p-5 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
+              {/* Benefits List - Tightened Spacing */}
+              <div className="space-y-3 text-right px-1 flex-1 flex flex-col justify-center">
+                  <div className="flex items-start gap-4 text-slate-900 bg-white p-4 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
                       <CheckCircle2 size={24} className="text-emerald-600 flex-shrink-0 mt-1" />
                       <span className="text-lg leading-snug font-medium">
                           <strong className="font-black block mb-1 text-xl">תמונת מצב מלאה</strong>
                           ריכוז כל הנכסים, הפנסיות וההתחייבויות במקום אחד
                       </span>
                   </div>
-                  <div className="flex items-start gap-5 text-slate-900 bg-white p-5 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
+                  <div className="flex items-start gap-4 text-slate-900 bg-white p-4 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
                       <CheckCircle2 size={24} className="text-emerald-600 flex-shrink-0 mt-1" />
                       <span className="text-lg leading-snug font-medium">
                           <strong className="font-black block mb-1 text-xl">פרטיות מעל הכל</strong>
                           הזנה ידנית ושליטה מלאה ללא חיבור לחשבונות הבנק, חברות הביטוח ובתי ההשקעות
                       </span>
                   </div>
-                  <div className="flex items-start gap-5 text-slate-900 bg-white p-5 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
+                  <div className="flex items-start gap-4 text-slate-900 bg-white p-4 rounded-2xl border border-slate-900 shadow-sm transition hover:scale-[1.02]">
                       <CheckCircle2 size={24} className="text-emerald-600 flex-shrink-0 mt-1" />
                       <span className="text-lg leading-snug font-medium">
                           <strong className="font-black block mb-1 text-xl">מבט לעתיד</strong>
@@ -149,11 +149,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
                  {/* Content Area */}
                  <div className="flex-1 overflow-hidden p-4 bg-slate-50 relative">
-                     {/* Dashboard Content Mockup */}
-                     <div className="space-y-4 transform scale-[0.95] origin-top">
+                     {/* Dashboard Content Mockup - Scaled to fit */}
+                     <div className="space-y-3 transform scale-[0.92] origin-top h-full">
                         
                         {/* Greeting & Buttons */}
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mb-2">
                             <div>
                                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
                                     שלום, ישראל ישראלי <Edit2 size={14} className="text-slate-300"/>
@@ -169,25 +169,25 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                             </div>
                         </div>
 
-                        {/* Charts Row */}
-                        <div className="grid grid-cols-3 gap-4 h-[220px]">
+                        {/* Charts Row - Height Reduced to 180px */}
+                        <div className="grid grid-cols-3 gap-3 h-[180px]">
                             {/* Pie Chart Card - FIXED CENTERING */}
-                            <div className="col-span-1 bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col items-center justify-center relative">
+                            <div className="col-span-1 bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col items-center justify-center relative">
                                 {/* Title - Top Right */}
-                                <div className="absolute top-4 right-4 text-right">
+                                <div className="absolute top-3 right-3 text-right">
                                     <h3 className="text-xs font-bold text-slate-700">שווי נקי</h3>
                                 </div>
                                 
                                 {/* Content - Centered */}
-                                <div className="flex flex-col items-center justify-center mt-6 w-full">
+                                <div className="flex flex-col items-center justify-center mt-5 w-full">
                                     {/* Value - Centered */}
-                                    <div className="text-xl font-black text-slate-800 mb-2">₪3,740,000</div>
+                                    <div className="text-xl font-black text-slate-800 mb-1">₪3,740,000</div>
                                     
                                     {/* Chart - Centered */}
-                                    <div className="w-full h-[100px]">
+                                    <div className="w-full h-[80px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
-                                                <Pie data={chartData} cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={5} dataKey="value" cornerRadius={4} stroke="none">
+                                                <Pie data={chartData} cx="50%" cy="50%" innerRadius={30} outerRadius={40} paddingAngle={5} dataKey="value" cornerRadius={4} stroke="none">
                                                     {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
                                                 </Pie>
                                             </PieChart>
@@ -197,8 +197,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                             </div>
                             
                             {/* Area Chart Card */}
-                            <div className="col-span-2 bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col">
-                                <div className="flex justify-between mb-2">
+                            <div className="col-span-2 bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col">
+                                <div className="flex justify-between mb-1">
                                     <h3 className="text-xs font-bold text-slate-700">התקדמות כלכלית</h3>
                                     <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold">+8.4%</span>
                                 </div>
@@ -221,37 +221,37 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         </div>
 
                         {/* Title */}
-                        <h2 className="text-sm font-bold text-slate-800 mt-2">התיק שלי</h2>
+                        <h2 className="text-sm font-bold text-slate-800 mt-1">התיק שלי</h2>
 
-                        {/* Asset Cards Grid */}
+                        {/* Asset Cards Grid - Tightened gaps */}
                         
                         {/* Row 1 */}
                         <div className="grid grid-cols-3 gap-3">
                             <div className="bg-white rounded-2xl p-3 border border-rose-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><ArrowRightLeft size={14} className="text-rose-500"/></div>
-                                        <div><div className="font-bold text-xs text-slate-700">תזרים</div><div className="text-[10px] text-slate-400">חיובי</div></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><ArrowRightLeft size={12} className="text-rose-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">תזרים</div><div className="text-[9px] text-slate-400">חיובי</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪4,200</div>
                             </div>
 
                             <div className="bg-white rounded-2xl p-3 border border-emerald-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><Wallet size={14} className="text-emerald-500"/></div>
-                                        <div><div className="font-bold text-xs text-slate-700">עו"ש</div><div className="text-[10px] text-slate-400">נזילות</div></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><Wallet size={12} className="text-emerald-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">עו"ש</div><div className="text-[9px] text-slate-400">נזילות</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪150,000</div>
                             </div>
 
                             <div className="bg-white rounded-2xl p-3 border border-blue-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><ShieldCheck size={14} className="text-blue-500"/></div>
-                                        <div><div className="font-bold text-xs text-slate-700">ביטחון</div><div className="text-[10px] text-slate-400">חירום</div></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><ShieldCheck size={12} className="text-blue-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">ביטחון</div><div className="text-[9px] text-slate-400">חירום</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪100,000</div>
@@ -261,68 +261,68 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         {/* Row 2 */}
                         <div className="grid grid-cols-3 gap-3">
                              <div className="bg-white rounded-2xl p-3 border border-cyan-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><User size={14} className="text-cyan-500"/></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><User size={12} className="text-cyan-500"/></div>
                                         <div><div className="font-bold text-xs text-slate-700">פנסיה</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪850,000</div>
-                                <div className="mt-2 space-y-1">
-                                    <div className="bg-slate-50 p-1 rounded text-[10px] flex justify-between"><span>מנורה</span><span className="font-bold">500k</span></div>
-                                    <div className="bg-slate-50 p-1 rounded text-[10px] flex justify-between"><span>אלטשולר</span><span className="font-bold">350k</span></div>
+                                <div className="mt-1 space-y-0.5">
+                                    <div className="bg-slate-50 p-0.5 rounded text-[9px] flex justify-between"><span>מנורה</span><span className="font-bold">500k</span></div>
+                                    <div className="bg-slate-50 p-0.5 rounded text-[9px] flex justify-between"><span>אלטשולר</span><span className="font-bold">350k</span></div>
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-2xl p-3 border border-amber-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><BookOpen size={14} className="text-amber-500"/></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><BookOpen size={12} className="text-amber-500"/></div>
                                         <div><div className="font-bold text-xs text-slate-700">השתלמות</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪120,000</div>
-                                <div className="mt-2 space-y-1">
-                                    <div className="bg-slate-50 p-1 rounded text-[10px] flex justify-between"><span>מור</span><span className="font-bold">120k</span></div>
+                                <div className="mt-1 space-y-0.5">
+                                    <div className="bg-slate-50 p-0.5 rounded text-[9px] flex justify-between"><span>מור</span><span className="font-bold">120k</span></div>
                                 </div>
                             </div>
 
                              <div className="bg-white rounded-2xl p-3 border border-purple-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><TrendingUp size={14} className="text-purple-500"/></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><TrendingUp size={12} className="text-purple-500"/></div>
                                         <div><div className="font-bold text-xs text-slate-700">השקעות</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪420,000</div>
-                                <div className="mt-2 space-y-1">
-                                    <div className="bg-slate-50 p-1 rounded text-[10px] flex justify-between"><span>חשבון מסחר עצמאי</span><span className="font-bold">420k</span></div>
+                                <div className="mt-1 space-y-0.5">
+                                    <div className="bg-slate-50 p-0.5 rounded text-[9px] flex justify-between"><span>מסחר</span><span className="font-bold">420k</span></div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Row 3 */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Row 3 - Now fully visible */}
+                        <div className="grid grid-cols-2 gap-3 pb-2">
                              <div className="bg-white rounded-2xl p-3 border border-indigo-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><Building2 size={14} className="text-indigo-500"/></div>
-                                        <div><div className="font-bold text-xs text-slate-700">נדל"ן</div><div className="text-[10px] text-slate-400">שווי שוק</div></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><Building2 size={12} className="text-indigo-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">נדל"ן</div><div className="text-[9px] text-slate-400">שווי שוק</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪2.1M</div>
-                                <div className="mt-2 text-[10px] text-slate-400">משכנתא: 920k</div>
+                                <div className="mt-1 text-[9px] text-slate-400">משכנתא: 920k</div>
                             </div>
 
                             <div className="bg-white rounded-2xl p-3 border border-rose-100 shadow-sm">
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-50 rounded-lg"><CreditCard size={14} className="text-rose-500"/></div>
-                                        <div><div className="font-bold text-xs text-slate-700">הלוואות</div><div className="text-[10px] text-slate-400">התחייבויות</div></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><CreditCard size={12} className="text-rose-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">הלוואות</div><div className="text-[9px] text-slate-400">התחייבויות</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪45,000</div>
-                                <div className="mt-2 text-[10px] text-slate-400">החזר חודשי: ₪1,200</div>
+                                <div className="mt-1 text-[9px] text-slate-400">החזר חודשי: ₪1,200</div>
                             </div>
                         </div>
 
