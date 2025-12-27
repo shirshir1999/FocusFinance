@@ -381,19 +381,19 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                                             {/* Symbol */}
                                             <div className="col-span-1 md:col-span-2">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">סימול</label>
-                                                <input type="text" placeholder="סימול" className="w-full p-2 text-sm border border-slate-200 rounded-lg focus:border-purple-500 outline-none" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} />
+                                                <input type="text" placeholder="סימול" className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} />
                                             </div>
                                             
                                             {/* Name */}
                                             <div className="col-span-1 md:col-span-2">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שם</label>
-                                                <input type="text" placeholder="שם" className="w-full p-2 text-sm border border-slate-200 rounded-lg focus:border-purple-500 outline-none" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} />
+                                                <input type="text" placeholder="שם" className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} />
                                             </div>
                                             
                                             {/* Currency */}
                                             <div className="col-span-1 md:col-span-1">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מטבע</label>
-                                                <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full p-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-purple-500 outline-none">
+                                                <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm cursor-pointer">
                                                     <option value="AGOROT">אג'</option>
                                                     <option value="USD">$</option>
                                                     <option value="EUR">€</option>
@@ -403,19 +403,19 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                                             {/* Quantity */}
                                             <div className="col-span-1 md:col-span-1">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">כמות</label>
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono focus:border-purple-500 outline-none" value={h.units} onChange={val => updateHolding(h.id, 'units', val)} />
+                                                <NumberInput placeholder="0" className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm" value={h.units} onChange={val => updateHolding(h.id, 'units', val)} />
                                             </div>
                                             
                                             {/* Buy Price */}
                                             <div className="col-span-1 md:col-span-1">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר קניה</label>
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono focus:border-purple-500 outline-none" value={h.buyPrice} onChange={val => updateHolding(h.id, 'buyPrice', val)} />
+                                                <NumberInput placeholder="0" className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm" value={h.buyPrice} onChange={val => updateHolding(h.id, 'buyPrice', val)} />
                                             </div>
                                             
                                             {/* Current Price */}
                                             <div className="col-span-1 md:col-span-1">
                                                 <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר נוכחי</label>
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-purple-200 bg-purple-50/50 rounded-lg font-mono font-bold focus:border-purple-500 outline-none" value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} />
+                                                <NumberInput placeholder="0" className="w-full bg-white border border-purple-200 rounded-lg px-2 py-1.5 text-sm font-mono font-bold focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm text-purple-700" value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} />
                                             </div>
                                             
                                             {/* Stats (Profit & Value) - Span full width on mobile or specific cols */}

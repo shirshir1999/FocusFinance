@@ -14,12 +14,14 @@ import SwitchingCalculator from './components/SwitchingCalculator';
 import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
+import TermsModal from './components/TermsModal';
 import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile } from './types';
-import { ExternalLink, AlertTriangle, LogOut, User, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight } from 'lucide-react';
+import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
 import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys } from './services/supabase';
 
 const initialData: FinancialState = {
+  hasAcceptedTerms: false,
   accounts: [],
   pensions: [],
   investments: [],
@@ -64,6 +66,9 @@ const App: React.FC = () => {
 
   // Help Modal State
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  
+  // Terms Modal State
+  const [showTerms, setShowTerms] = useState(false);
 
   // Scroll to top when view changes
   useEffect(() => {
@@ -74,13 +79,24 @@ const App: React.FC = () => {
 
   // 1. Listen for Auth Changes
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initAuth = async () => {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            setCurrentUser(session?.user ?? null);
+        } catch (err) {
+            console.error("Auth check failed:", err);
+            setCurrentUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setCurrentUser(session?.user ?? null);
+      if(session?.user) setLoading(false); // Ensure loading is off if event fires
     });
 
     return () => subscription.unsubscribe();
@@ -90,39 +106,52 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       const load = async () => {
-        setLoading(true);
-        const cloudData = await fetchUserData(currentUser.id);
-        if (cloudData) {
-            // Ensure profiles exist (migration)
-            if (!cloudData.profiles || cloudData.profiles.length === 0) {
-                 const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
-                 cloudData.profiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
-                 
-                 // Assign existing items to main profile if they have no owner
-                 const assignOwner = (items: any[]) => items.map(i => ({...i, ownerId: i.ownerId || 'main'}));
-                 cloudData.accounts = assignOwner(cloudData.accounts || []);
-                 cloudData.pensions = assignOwner(cloudData.pensions || []);
-                 cloudData.investments = assignOwner(cloudData.investments || []);
-                 cloudData.realEstate = assignOwner(cloudData.realEstate || []);
-                 cloudData.loans = assignOwner(cloudData.loans || []);
+        // Only set loading if we don't have data yet to avoid flicker on re-renders
+        if(data === initialData) setLoading(true);
+        
+        try {
+            const cloudData = await fetchUserData(currentUser.id);
+            if (cloudData) {
+                // Ensure profiles exist (migration)
+                if (!cloudData.profiles || cloudData.profiles.length === 0) {
+                     const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
+                     cloudData.profiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
+                     
+                     // Assign existing items to main profile if they have no owner
+                     const assignOwner = (items: any[]) => items.map(i => ({...i, ownerId: i.ownerId || 'main'}));
+                     cloudData.accounts = assignOwner(cloudData.accounts || []);
+                     cloudData.pensions = assignOwner(cloudData.pensions || []);
+                     cloudData.investments = assignOwner(cloudData.investments || []);
+                     cloudData.realEstate = assignOwner(cloudData.realEstate || []);
+                     cloudData.loans = assignOwner(cloudData.loans || []);
+                }
+                setData(cloudData);
+                
+                // Check for Terms Acceptance
+                if (!cloudData.hasAcceptedTerms) {
+                    setShowTerms(true);
+                }
+                
+                // If only one profile, ensure we are not in 'all' view logically
+                if (cloudData.profiles.length === 1) {
+                    setActiveProfileId(cloudData.profiles[0].id);
+                }
+            } else {
+                // Init new user with default profile
+                const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
+                const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
+                setData({
+                    ...initialData,
+                    profiles: newProfiles
+                });
+                setActiveProfileId('main');
+                setShowTerms(true); // New User needs to accept terms
             }
-            setData(cloudData);
-            
-            // If only one profile, ensure we are not in 'all' view logically (though 'all' works, UI should show user)
-            if (cloudData.profiles.length === 1) {
-                setActiveProfileId(cloudData.profiles[0].id);
-            }
-        } else {
-            // Init new user with default profile
-            const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
-            const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
-            setData({
-                ...initialData,
-                profiles: newProfiles
-            });
-            setActiveProfileId('main');
+        } catch (e) {
+            console.error("Error loading data", e);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
       };
       load();
     }
@@ -141,6 +170,14 @@ const App: React.FC = () => {
     setData(initialData);
     setActiveView('dashboard');
     setActiveProfileId('all');
+    setShowTerms(false);
+  };
+
+  const handleAcceptTerms = () => {
+      setData(prev => ({ ...prev, hasAcceptedTerms: true }));
+      setShowTerms(false);
+      // Automatically open Help Guide after accepting terms for the first time
+      setIsHelpOpen(true);
   };
 
   const updateData = (key: keyof FinancialState, items: any) => {
@@ -600,6 +637,9 @@ const App: React.FC = () => {
               </div>
           </footer>
       </div>
+
+      {/* Terms of Service Modal - Only show if logged in and hasn't accepted */}
+      {currentUser && showTerms && <TermsModal onAccept={handleAcceptTerms} />}
 
       {/* Edit Name Modal */}
       {isEditNameOpen && (

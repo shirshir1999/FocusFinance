@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BaseItem, HistoryEntry, PensionItem, InvestmentItem, RealEstateItem, AssetCategory, MortgageTrack, InvestmentHolding, UserProfile } from '../types';
-import { X, Save, TrendingUp, History, Settings, Plus, Trash2, Table, Edit2, Check, DollarSign, ShoppingCart, GripHorizontal, Users, ArrowRight, CreditCard, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Save, TrendingUp, History, Settings, Plus, Trash2, Table, Edit2, Check, DollarSign, ShoppingCart, GripHorizontal, Users, ArrowRight, CreditCard, UserPlus, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import NumberInput from './NumberInput';
 
@@ -64,6 +64,9 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   const [editHistoryValue, setEditHistoryValue] = useState<string>('');
   const [editHistoryDate, setEditHistoryDate] = useState<string>('');
   const [confirmDeleteHistoryIndex, setConfirmDeleteHistoryIndex] = useState<number | null>(null);
+  
+  // Holding Delete Confirm
+  const [confirmDeleteHoldingId, setConfirmDeleteHoldingId] = useState<string | null>(null);
 
   useEffect(() => {
         // Reset Management State
@@ -154,8 +157,13 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   };
 
   // --- Holdings Logic (Management) ---
-  const addHolding = () => setHoldings([...holdings, { id: Date.now().toString(), symbol: '', name: '', units: 0, currency: 'ILS', buyPrice: 0, currentPrice: 0 }]);
-  const removeHolding = (id: string) => setHoldings(holdings.filter(h => h.id !== id));
+  const addHolding = () => setHoldings([...holdings, { id: Date.now().toString(), symbol: '', name: '', units: 0, currency: 'AGOROT', buyPrice: 0, currentPrice: 0 }]);
+  const confirmRemoveHolding = () => {
+      if (confirmDeleteHoldingId) {
+          setHoldings(holdings.filter(h => h.id !== confirmDeleteHoldingId));
+          setConfirmDeleteHoldingId(null);
+      }
+  };
   const updateHolding = (id: string, field: keyof InvestmentHolding, value: any) => setHoldings(holdings.map(h => h.id === id ? { ...h, [field]: value } : h));
 
   // --- Transaction Logic ---
@@ -349,16 +357,18 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                             {/* Holdings List (Responsive Grid/Cards) */}
                             {isInvestWithHoldings && (
                                 <div className="space-y-3">
-                                    {/* Header Row - Desktop Only */}
+                                    {/* Header Row - Desktop Only - Updated Layout for 12 columns */}
                                     <div className="hidden md:grid grid-cols-12 gap-3 mb-2 text-xs font-bold text-slate-500 px-3">
-                                        <div className="col-span-2">סימול</div>
+                                        <div className="col-span-1">סימול</div>
                                         <div className="col-span-2">שם</div>
                                         <div className="col-span-1">מטבע</div>
                                         <div className="col-span-1">כמות</div>
                                         <div className="col-span-1">מחיר קניה</div>
                                         <div className="col-span-1">מחיר נוכחי</div>
-                                        <div className="col-span-2 text-center">רווח/הפסד</div>
+                                        <div className="col-span-1 text-center">רווח/הפסד</div>
                                         <div className="col-span-2">שווי</div>
+                                        <div className="col-span-1 text-center">פעולות</div>
+                                        <div className="col-span-1"></div> {/* Empty for delete column */}
                                     </div>
 
                                     {holdings.map(h => {
@@ -376,36 +386,39 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                         return (
                                           <div key={h.id} className={`bg-slate-50 p-4 rounded-xl border transition-colors relative group ${isTransacting ? 'border-blue-300 bg-blue-50/30' : 'border-slate-100 shadow-sm'}`}>
                                             
-                                            {/* Holding Row */}
+                                            {/* Holding Row - Updated grid to match header */}
                                             <div className="grid grid-cols-2 md:grid-cols-12 gap-4 md:gap-3 items-center">
                                                 {/* Symbol */}
-                                                <div className="col-span-1 md:col-span-2">
+                                                <div className="col-span-1 md:col-span-1">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">סימול</label>
-                                                    <input type="text" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" />
+                                                    <input type="text" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="---" />
                                                 </div>
                                                 
                                                 {/* Name */}
                                                 <div className="col-span-1 md:col-span-2">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שם</label>
-                                                    <input type="text" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" />
+                                                    <input type="text" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="---" />
                                                 </div>
                                                 
                                                 {/* Currency */}
                                                 <div className="col-span-1 md:col-span-1">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מטבע</label>
-                                                    <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-transparent border-b border-transparent text-xs outline-none">
-                                                        <option value="ILS">₪</option>
+                                                    <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer">
+                                                        <option value="AGOROT">אג'</option>
                                                         <option value="USD">$</option>
                                                         <option value="EUR">€</option>
-                                                        <option value="AGOROT">אג'</option>
                                                     </select>
                                                 </div>
                                                 
-                                                {/* Quantity/Actions */}
+                                                {/* Quantity */}
                                                 <div className="col-span-1 md:col-span-1">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">כמות</label>
-                                                    <div className="flex flex-col gap-2">
-                                                         <span className="font-mono font-bold text-center">{h.units.toLocaleString()}</span>
+                                                    <div className="flex flex-col gap-2 md:block">
+                                                         {/* Desktop Input */}
+                                                         <div className="hidden md:block">
+                                                            <span className="font-mono font-bold text-center block mb-1">{h.units.toLocaleString()}</span>
+                                                         </div>
+                                                         {/* Mobile Actions */}
                                                          <div className="flex gap-1 justify-center md:hidden">
                                                              <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="flex-1 px-1 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold">קניה</button>
                                                              <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="flex-1 px-1 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">מכירה</button>
@@ -414,22 +427,22 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                                 </div>
                                                 
                                                 {/* Buy Price */}
-                                                <div className="col-span-1 md:col-span-1 font-mono text-slate-500">
+                                                <div className="col-span-1 md:col-span-1">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר קניה</label>
-                                                    {h.buyPrice.toLocaleString()}
+                                                    <NumberInput value={h.buyPrice} onChange={val => updateHolding(h.id, 'buyPrice', val)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="0" />
                                                 </div>
                                                 
                                                 {/* Current Price */}
                                                 <div className="col-span-1 md:col-span-1">
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר נוכחי</label>
-                                                    <NumberInput value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} className="w-full bg-transparent border-b border-slate-200 focus:border-emerald-500 outline-none font-bold" placeholder="0" />
+                                                    <NumberInput value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-mono font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="0" />
                                                 </div>
                                                 
                                                 {/* Profit */}
-                                                <div className={`col-span-1 md:col-span-2 font-mono ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'} text-center md:text-right`}>
+                                                <div className={`col-span-1 md:col-span-1 font-mono ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'} text-center md:text-right`}>
                                                     <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">רווח/הפסד</label>
-                                                    <div className="text-base font-black">{profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                                                    <div className="opacity-80 text-xs font-bold dir-ltr">{profitPercent.toFixed(2)}%</div>
+                                                    <div className="text-sm font-black">{profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                                                    <div className="opacity-80 text-[10px] font-bold dir-ltr">{profitPercent.toFixed(2)}%</div>
                                                 </div>
                                                 
                                                 {/* Value */}
@@ -438,11 +451,19 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                                     <div className="font-mono font-bold text-slate-700 text-lg">{formatCurrency(val)}</div>
                                                 </div>
 
-                                                {/* Desktop Delete Button */}
-                                                <button type="button" onClick={() => removeHolding(h.id)} className="hidden md:block absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-500 transition"><Trash2 size={18}/></button>
+                                                {/* Actions Column (Desktop) - Dedicated Column 11 */}
+                                                <div className="hidden md:flex col-span-1 flex-col gap-1 items-center justify-center">
+                                                     <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="w-full px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-[10px] font-bold transition shadow-sm">קניה</button>
+                                                     <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="w-full px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-[10px] font-bold transition shadow-sm">מכירה</button>
+                                                </div>
+
+                                                {/* Desktop Delete Button - Dedicated Column 12 (Stable Position) */}
+                                                <div className="hidden md:flex col-span-1 justify-center">
+                                                    <button type="button" onClick={() => setConfirmDeleteHoldingId(h.id)} className="text-slate-300 hover:text-red-500 transition p-2 rounded-full hover:bg-red-50"><Trash2 size={18}/></button>
+                                                </div>
                                                 
-                                                {/* Mobile Delete Button */}
-                                                <button type="button" onClick={() => removeHolding(h.id)} className="md:hidden absolute top-2 left-2 text-slate-300 hover:text-red-500 bg-white p-1 rounded-full shadow-sm"><Trash2 size={14}/></button>
+                                                {/* Mobile Delete Button - Absolute works fine on mobile cards */}
+                                                <button type="button" onClick={() => setConfirmDeleteHoldingId(h.id)} className="md:hidden absolute top-2 left-2 text-slate-300 hover:text-red-500 bg-white p-1 rounded-full shadow-sm"><Trash2 size={14}/></button>
                                             </div>
 
                                             {/* Transaction UI - Nested inside card on mobile, expanded row logic */}
@@ -476,12 +497,6 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                                     </div>
                                                 </div>
                                             )}
-                                            
-                                            {/* Desktop Quick Actions */}
-                                            <div className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                 <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-xs font-bold transition">קניה</button>
-                                                 <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-bold transition">מכירה</button>
-                                            </div>
                                           </div>
                                         );
                                     })}
@@ -748,6 +763,27 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                 <div className="flex gap-3 justify-center">
                    <button onClick={() => setConfirmDeleteHistoryIndex(null)} className="px-6 py-3 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold transition">ביטול</button>
                    <button onClick={deleteHistory} className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition">מחק רשומה</button>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* Delete Holding Confirm */}
+        {confirmDeleteHoldingId !== null && (
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setConfirmDeleteHoldingId(null)}
+          >
+             <div 
+                className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-4"
+                onClick={e => e.stopPropagation()}
+             >
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500"><AlertTriangle size={32}/></div>
+                <h3 className="font-black text-xl text-slate-800 mb-2 text-center">מחיקת נייר ערך</h3>
+                <p className="text-center text-slate-500 mb-8">האם אתם בטוחים? הנייר יימחק מרשימת ההחזקות.</p>
+                <div className="flex gap-3 justify-center">
+                   <button onClick={() => setConfirmDeleteHoldingId(null)} className="px-6 py-3 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold transition">ביטול</button>
+                   <button onClick={confirmRemoveHolding} className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition">מחק</button>
                 </div>
              </div>
           </div>

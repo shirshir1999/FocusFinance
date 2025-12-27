@@ -61,8 +61,15 @@ const mockAuth = {
         return { data: { user, session }, error: null };
     },
     signInWithOAuth: async () => {
-        alert("במצב הדגמה מקומי, התחברות עם גוגל אינה פעילה. אנא השתמש באימייל וסיסמה רגילים.");
-        return { error: { message: "Not supported in mock mode" } };
+        // Mock success for local mode
+        const user = {
+            id: 'mock-user-id',
+            email: 'demo@local.com',
+            user_metadata: { full_name: 'משתמש הדגמה' }
+        };
+        const session = { user, access_token: 'mock-token' };
+        localStorage.setItem('mock_session', JSON.stringify(session));
+        return { data: { session }, error: null };
     },
     signOut: async () => {
         localStorage.removeItem('mock_session');
