@@ -53,7 +53,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
       setSelectedItem(item);
   };
 
-  // Inline Detail View
   if (selectedItem) {
       return (
           <AssetModal 
@@ -72,7 +71,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in pb-24">
-       {/* Header */}
        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition text-slate-500">
@@ -84,6 +82,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
             </div>
           </div>
           <button 
+            id="tour-add-account-btn"
             onClick={() => setIsAddOpen(!isAddOpen)}
             className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition transform hover:-translate-y-1 ${isAddOpen ? 'bg-slate-200 text-slate-600' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'}`}
           >
@@ -94,8 +93,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
 
       <div className="flex flex-col gap-8">
         
-        {/* List Section */}
-        <div className="space-y-4">
+        <div className="space-y-4" id="tour-accounts-list">
           {items.length === 0 && !isAddOpen ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-slate-400">
                <Wallet size={48} className="mx-auto mb-4 opacity-50" />
@@ -154,7 +152,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
           )}
         </div>
 
-        {/* Inline Add Form */}
         {isAddOpen && (
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-3xl p-6 md:p-8 animate-fade-in shadow-sm">
                 <h3 className="text-xl font-black text-emerald-800 mb-6 flex items-center gap-2">
@@ -223,7 +220,6 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ items, onAdd, onRemove, onUpd
 
       </div>
 
-      {/* Custom Confirmation Modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setConfirmDeleteId(null)}>
              <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full mx-4 transform transition-all scale-100 text-center" onClick={e => e.stopPropagation()}>

@@ -237,23 +237,26 @@ const PensionCalculator: React.FC<PensionCalculatorProps> = ({ data, onClose }) 
                      <div className="grid grid-cols-2 gap-4 mb-2 flex-shrink-0">
                          <div className="bg-cyan-50 p-3 rounded-2xl border border-cyan-100 text-center">
                              <h4 className="text-cyan-800 font-bold mb-1 text-xs">שווי הוני כולל (נומינלי)</h4>
-                             <div className="text-xl md:text-2xl font-black text-cyan-700">{formatCurrency(nominalTotal)}</div>
+                             <div className="text-lg md:text-2xl font-black text-cyan-700 break-words">{formatCurrency(nominalTotal)}</div>
                          </div>
                          <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center">
                              <h4 className="text-emerald-700 font-bold mb-1 text-xs">שווי הוני כולל (ריאלי)</h4>
-                             <div className="text-xl md:text-2xl font-black text-emerald-600">{formatCurrency(realTotal)}</div>
+                             <div className="text-lg md:text-2xl font-black text-emerald-600 break-words">{formatCurrency(realTotal)}</div>
                          </div>
                      </div>
 
                      <div className="grid grid-cols-2 gap-4 mb-6 flex-shrink-0">
                          <div className="bg-cyan-50 p-4 rounded-2xl border border-cyan-100 text-center">
                              <h4 className="text-cyan-900 font-bold mb-1">קצבה (נומינלי)</h4>
-                             <div className="text-3xl font-black text-cyan-600">{formatCurrency(nominalAnnuity)}</div>
+                             <div className="text-2xl md:text-3xl font-black text-cyan-600 break-words">{formatCurrency(nominalAnnuity)}</div>
                          </div>
-                         <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 text-center relative overflow-hidden">
-                             <div className="absolute top-2 right-2 bg-emerald-200 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">כוח קניה</div>
-                             <h4 className="text-emerald-900 font-bold mb-1">קצבה (ריאלי)</h4>
-                             <div className="text-3xl font-black text-emerald-600">{formatCurrency(realAnnuity)}</div>
+                         {/* Fixed overlapping text issue on mobile by using flex layout instead of absolute positioning */}
+                         <div className="bg-emerald-50 p-3 md:p-4 rounded-2xl border border-emerald-100 text-center flex flex-col justify-between">
+                             <div className="flex justify-between items-center w-full mb-1">
+                                 <h4 className="text-emerald-900 font-bold text-sm md:text-base">קצבה (ריאלי)</h4>
+                                 <span className="bg-emerald-200 text-emerald-800 text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full font-bold whitespace-nowrap">כוח קניה</span>
+                             </div>
+                             <div className="text-2xl md:text-3xl font-black text-emerald-600 break-words mt-1">{formatCurrency(realAnnuity)}</div>
                          </div>
                      </div>
 

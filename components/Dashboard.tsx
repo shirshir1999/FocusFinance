@@ -17,11 +17,8 @@ const COLORS = ['#10B981', '#3B82F6', '#06B6D4', '#F59E0B', '#8B5CF6', '#6366F1'
 
 const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles }) => {
   
-  // Helper to find profile info
   const getProfile = (id?: string) => profiles.find(p => p.id === id);
 
-  // --- Calculations ---
-  // Data passed here is already filtered by App.tsx
   const checkingTotal = data.accounts.filter(a => a.type !== 'emergency').reduce((sum, item) => sum + item.value, 0);
   const emergencyTotal = data.accounts.filter(a => a.type === 'emergency').reduce((sum, item) => sum + item.value, 0);
   
@@ -42,7 +39,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   const totalAssets = checkingTotal + emergencyTotal + pensionTotal + studyFundTotal + investmentsTotal + realEstateTotal;
   const netWorth = totalAssets - totalMortgage - totalLoans;
 
-  // Cash Flow
   const monthlyIncome = (data.cashFlow?.monthlyIncome || 0) + (data.cashFlow?.additionalIncomes?.reduce((s: number, i: IncomeItem) => s + i.amount, 0) || 0);
   
   const rawRealEstateIncome = data.realEstate.reduce((sum, r) => sum + (r.monthlyRent || 0), 0);
@@ -71,7 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   const totalExpensesWithDebt = totalExpenses + totalDebtService;
   const monthlyNet = totalIncome - totalExpensesWithDebt;
 
-  // History Data logic
   const historyData = useMemo(() => {
     const allItems = [...data.accounts, ...data.pensions, ...data.investments, ...data.realEstate, ...data.loans];
     const dateSet = new Set<string>();
@@ -138,7 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
             </div>
             <p className="text-slate-500 mt-1">הנה תמונת המצב הפיננסית שלך להיום</p>
           </div>
-          <div className="flex flex-wrap gap-3 items-center">
+          <div id="tour-quick-actions" className="flex flex-wrap gap-3 items-center">
              <button onClick={() => onNavigate('future_projection')} className="flex items-center gap-2 bg-emerald-600 text-white border border-emerald-600 px-5 py-2.5 rounded-full hover:bg-emerald-700 transition text-sm font-bold shadow-md shadow-emerald-200">
                  <TrendingUp size={18} />
                  <span>תחזית לעתיד</span>
@@ -161,8 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
           </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Pie Chart */}
+      <div id="tour-stats-area" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col min-h-[450px]">
            <div className="mb-4">
                <h2 className="text-lg font-bold text-slate-700 mb-1">שווי נקי</h2>
@@ -194,7 +188,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
                 </ResponsiveContainer>
                </div>
 
-               {/* Custom Legend */}
                <div className="w-full space-y-3 mt-4">
                    {chartData.map((item, idx) => (
                        <div key={idx} className="flex items-center justify-between text-sm">
@@ -212,11 +205,11 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
            </div>
         </div>
 
-        {/* Progress Chart */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col relative">
             <div className="flex justify-between items-start mb-6">
                 <h2 className="text-lg font-bold text-slate-700">התקדמות כלכלית</h2>
                 <button 
+                    id="tour-history-btn"
                     onClick={() => onNavigate('history_view')}
                     className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition"
                 >
@@ -251,98 +244,95 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
         </div>
       </div>
 
-      {/* GRID LAYOUT */}
-      <h2 className="text-xl font-bold text-slate-800 mt-4">התיק שלי</h2>
-      
-      {/* Row 1: CashFlow, Checking, Emergency */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-         <DashboardCard 
-            title='תזרים' 
-            subtitle={monthlyNet >= 0 ? 'חיובי' : 'שלילי'}
-            value={monthlyNet}
-            icon={<ArrowRightLeft size={24} className="text-rose-500" />}
-            colorClass="border-rose-100"
-            onClick={() => onNavigate('cashflow')}
-            footer={<span className="text-xs text-slate-400">הכנסות: {formatCurrency(totalIncome)} | הוצאות: {formatCurrency(totalExpensesWithDebt)}</span>}
-        />
-        <DashboardCard 
-            title='עו"ש' 
-            subtitle="נזילות מיידית"
-            value={checkingTotal}
-            icon={<Landmark size={24} className="text-emerald-500" />}
-            colorClass="border-emerald-100"
-            onClick={() => onNavigate('accounts')}
-        />
-        <DashboardCard 
-            title='קרן ביטחון' 
-            subtitle="למקרי חירום"
-            value={emergencyTotal}
-            icon={<ShieldCheck size={24} className="text-blue-500" />}
-            colorClass="border-blue-100"
-            onClick={() => onNavigate('accounts')}
-        />
-      </div>
+      <div id="tour-asset-grid">
+        <h2 className="text-xl font-bold text-slate-800 mt-4 mb-5">התיק שלי</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+            <DashboardCard 
+                title='תזרים' 
+                subtitle={monthlyNet >= 0 ? 'חיובי' : 'שלילי'}
+                value={monthlyNet}
+                icon={<ArrowRightLeft size={24} className="text-rose-500" />}
+                colorClass="border-rose-100"
+                onClick={() => onNavigate('cashflow')}
+                footer={<span className="text-xs text-slate-400">הכנסות: {formatCurrency(totalIncome)} | הוצאות: {formatCurrency(totalExpensesWithDebt)}</span>}
+            />
+            <DashboardCard 
+                title='עו"ש' 
+                subtitle="נזילות מיידית"
+                value={checkingTotal}
+                icon={<Landmark size={24} className="text-emerald-500" />}
+                colorClass="border-emerald-100"
+                onClick={() => onNavigate('accounts')}
+            />
+            <DashboardCard 
+                title='קרן ביטחון' 
+                subtitle="למקרי חירום"
+                value={emergencyTotal}
+                icon={<ShieldCheck size={24} className="text-blue-500" />}
+                colorClass="border-blue-100"
+                onClick={() => onNavigate('accounts')}
+            />
+        </div>
 
-      {/* Row 2: Pension, Study, Investments */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-         <DetailedCard 
-            title='פנסיה וגמל'
-            icon={<User size={24} className="text-cyan-500" />}
-            colorClass="border-cyan-100"
-            total={pensionTotal}
-            items={data.pensions.filter(p => p.type === 'pension' || p.type === 'provident_fund')}
-            onClick={() => onNavigate('pension', { type: 'pension' })}
-            activeProfileId={activeProfileId}
-            getProfile={getProfile}
-         />
-         <DetailedCard 
-            title='קרן השתלמות'
-            icon={<BookOpen size={24} className="text-amber-500" />}
-            colorClass="border-amber-100"
-            total={studyFundTotal}
-            items={data.pensions.filter(p => p.type === 'study_fund')}
-            onClick={() => onNavigate('pension', { type: 'study_fund' })}
-            activeProfileId={activeProfileId}
-            getProfile={getProfile}
-         />
-         <DetailedCard 
-            title='תיק השקעות'
-            icon={<TrendingUp size={24} className="text-purple-500" />}
-            colorClass="border-purple-100"
-            total={investmentsTotal}
-            items={data.investments}
-            onClick={() => onNavigate('investments')}
-            activeProfileId={activeProfileId}
-            getProfile={getProfile}
-         />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+            <DetailedCard 
+                title='פנסיה וגמל'
+                icon={<User size={24} className="text-cyan-500" />}
+                colorClass="border-cyan-100"
+                total={pensionTotal}
+                items={data.pensions.filter(p => p.type === 'pension' || p.type === 'provident_fund')}
+                onClick={() => onNavigate('pension', { type: 'pension' })}
+                activeProfileId={activeProfileId}
+                getProfile={getProfile}
+            />
+            <DetailedCard 
+                title='קרן השתלמות'
+                icon={<BookOpen size={24} className="text-amber-500" />}
+                colorClass="border-amber-100"
+                total={studyFundTotal}
+                items={data.pensions.filter(p => p.type === 'study_fund')}
+                onClick={() => onNavigate('pension', { type: 'study_fund' })}
+                activeProfileId={activeProfileId}
+                getProfile={getProfile}
+            />
+            <DetailedCard 
+                title='תיק השקעות'
+                icon={<TrendingUp size={24} className="text-purple-500" />}
+                colorClass="border-purple-100"
+                total={investmentsTotal}
+                items={data.investments}
+                onClick={() => onNavigate('investments')}
+                activeProfileId={activeProfileId}
+                getProfile={getProfile}
+            />
+        </div>
 
-      {/* Row 3: Real Estate & Loans */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <DashboardCard 
-            title='נדל"ן' 
-            subtitle="שווי שוק"
-            value={realEstateTotal}
-            icon={<Building2 size={24} className="text-indigo-500" />}
-            colorClass="border-indigo-100"
-            onClick={() => onNavigate('realestate')}
-            footer={<span className="text-xs text-slate-400">משכנתא: {formatCurrency(totalMortgage)} | הון עצמי: {formatCurrency(realEstateTotal - totalMortgage)}</span>}
-        />
-        <DashboardCard 
-            title='הלוואות' 
-            subtitle="התחייבויות שוטפות"
-            value={totalLoans}
-            icon={<CreditCard size={24} className="text-rose-500" />}
-            colorClass="border-rose-100"
-            onClick={() => onNavigate('loans')}
-            footer={<span className="text-xs text-slate-400">החזר חודשי כולל: {formatCurrency(totalLoanPayments)}</span>}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <DashboardCard 
+                title='נדל"ן' 
+                subtitle="שווי שוק"
+                value={realEstateTotal}
+                icon={<Building2 size={24} className="text-indigo-500" />}
+                colorClass="border-indigo-100"
+                onClick={() => onNavigate('realestate')}
+                footer={<span className="text-xs text-slate-400">משכנתא: {formatCurrency(totalMortgage)} | הון עצמי: {formatCurrency(realEstateTotal - totalMortgage)}</span>}
+            />
+            <DashboardCard 
+                title='הלוואות' 
+                subtitle="התחייבויות שוטפות"
+                value={totalLoans}
+                icon={<CreditCard size={24} className="text-rose-500" />}
+                colorClass="border-rose-100"
+                onClick={() => onNavigate('loans')}
+                footer={<span className="text-xs text-slate-400">החזר חודשי כולל: {formatCurrency(totalLoanPayments)}</span>}
+            />
+        </div>
       </div>
     </div>
   );
 };
 
-// Simple Card
 const DashboardCard: React.FC<{
     title: string;
     subtitle: string;
@@ -372,7 +362,6 @@ const DashboardCard: React.FC<{
     );
 }
 
-// Detailed Card
 const DetailedCard: React.FC<{
     title: string;
     icon: React.ReactNode;
@@ -408,7 +397,6 @@ const DetailedCard: React.FC<{
                             <span>₪{Number(item.value / 1000).toFixed(0)}k</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
-                             {/* Badge for Owner (Only if viewing 'All' and not shared, or explicit logic) */}
                              {activeProfileId === 'all' && (
                                 <span 
                                     className={`px-1.5 py-0.5 rounded text-[10px] font-bold text-white flex items-center gap-1`}

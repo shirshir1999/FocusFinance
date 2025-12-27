@@ -301,7 +301,7 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   const multipleProfiles = profiles.length > 1;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white animate-fade-in">
+    <div className="w-full h-full flex flex-col bg-white animate-fade-in" id="tour-asset-modal">
         
         {/* Header - Back Button & Title */}
         <div className="bg-slate-50 border-b border-slate-200 flex-shrink-0 sticky top-0 z-20">
@@ -506,7 +506,7 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                     )}
 
                     {/* --- AREA 2: VALUE UPDATE FORM --- */}
-                    <div className="bg-emerald-50/50 p-6 md:p-8 rounded-3xl border border-emerald-100 shadow-sm">
+                    <div className="bg-emerald-50/50 p-6 md:p-8 rounded-3xl border border-emerald-100 shadow-sm" id="tour-modal-update-area">
                         <h3 className="font-bold text-emerald-900 mb-6 flex items-center gap-2 text-lg">
                             <TrendingUp size={24} className="bg-emerald-200 p-1 rounded-lg text-emerald-700" />
                             {isInvestWithHoldings ? 'סיכום ושמירה' : 'עדכון שווי'}

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { CashFlowState, IncomeItem, LoanItem, RealEstateItem } from '../types';
 import { ArrowRight, Save, Plus, Trash2, ArrowRightLeft, Building2, CreditCard } from 'lucide-react';
@@ -48,8 +47,8 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
       });
   }, [monthlyIncome, additionalIncomes, includeRealEstateRent, rentInclusionPercentage, mode, generalExpense, detailedExpenses]);
 
-  const handleDetailedChange = (category: string, value: number) => {
-      setDetailedExpenses(prev => ({ ...prev, [category]: value }));
+  const handleDetailedChange = (category: string, value: string) => {
+      setDetailedExpenses(prev => ({ ...prev, [category]: Number(value) }));
   };
 
   const addIncomeSource = () => {
@@ -57,7 +56,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
   };
 
   const updateIncomeSource = (id: string, field: 'source' | 'amount', value: any) => {
-      setAdditionalIncomes(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+      setAdditionalIncomes(prev => prev.map(item => item.id === id ? { ...item, [field]: field === 'amount' ? Number(value) : value } : item));
   };
 
   const removeIncomeSource = (id: string) => {
@@ -65,9 +64,8 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
   };
 
   // Calculations
-  // Added explicit types to reduce function parameters to fix 'unknown' inference error
-  const totalAdditionalIncome = additionalIncomes.reduce((sum: number, item: IncomeItem) => sum + item.amount, 0);
-  const totalBaseIncome = monthlyIncome + totalAdditionalIncome;
+  const totalAdditionalIncome = additionalIncomes.reduce((sum: number, item: IncomeItem) => sum + Number(item.amount), 0);
+  const totalBaseIncome = Number(monthlyIncome) + totalAdditionalIncome;
   
   const totalRentPotential = realEstate.reduce((sum, r) => sum + (r.monthlyRent || 0), 0);
   const includedRent = includeRealEstateRent ? totalRentPotential * (rentInclusionPercentage / 100) : 0;
@@ -85,9 +83,8 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
   const totalDebtService = totalLoanPayments + totalMortgagePayments;
 
   const userExpenses = mode === 'simple' 
-      ? generalExpense 
-      : // Fixed: Cast the result of Object.values to number[] to resolve 'unknown' type issue in reduce
-        (Object.values(detailedExpenses) as number[]).reduce((sum, val) => sum + val, 0);
+      ? Number(generalExpense) 
+      : (Object.values(detailedExpenses) as number[]).reduce((sum, val) => sum + Number(val), 0);
   
   const totalExpenses = userExpenses + totalDebtService;
   const netFlow = finalTotalIncome - totalExpenses;
@@ -109,7 +106,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Income Section */}
-            <div className="lg:col-span-3 bg-white border border-slate-100 p-6 rounded-3xl shadow-sm space-y-6">
+            <div className="lg:col-span-3 bg-white border border-slate-100 p-4 md:p-6 rounded-3xl shadow-sm space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div>
                          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><ArrowRightLeft size={20} className="text-emerald-500"/> הכנסות מעבודה ועוד</h3>
@@ -118,35 +115,37 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                                  <label className="block text-sm font-bold text-slate-500 mb-2">הכנסה חודשית מעבודה (נטו)</label>
                                  <NumberInput 
                                      value={monthlyIncome}
-                                     onChange={(val) => setMonthlyIncome(val)}
+                                     onChange={(val) => setMonthlyIncome(Number(val))}
                                      className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-black text-2xl text-emerald-700"
                                      placeholder="0"
                                  />
                              </div>
                              
-                             <div className="space-y-2">
+                             <div className="space-y-3">
                                  {additionalIncomes.map((item) => (
-                                     <div key={item.id} className="flex gap-2">
+                                     <div key={item.id} className="flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
                                          <input 
                                             type="text" 
                                             value={item.source}
                                             onChange={(e) => updateIncomeSource(item.id, 'source', e.target.value)}
-                                            placeholder="מקור"
-                                            className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                            placeholder="מקור ההכנסה"
+                                            className="w-full sm:flex-1 p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-500"
                                          />
-                                         <NumberInput 
-                                            value={item.amount}
-                                            onChange={(val) => updateIncomeSource(item.id, 'amount', val)}
-                                            placeholder="סכום"
-                                            className="w-24 p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-sm"
-                                         />
-                                         <button onClick={() => removeIncomeSource(item.id)} className="text-red-400 hover:text-red-600">
-                                             <Trash2 size={18} />
-                                         </button>
+                                         <div className="flex gap-2 w-full sm:w-auto">
+                                            <NumberInput 
+                                                value={item.amount}
+                                                onChange={(val) => updateIncomeSource(item.id, 'amount', val)}
+                                                placeholder="סכום"
+                                                className="flex-1 sm:w-28 p-2 bg-white border border-slate-200 rounded-lg font-bold text-sm outline-none focus:border-emerald-500"
+                                            />
+                                            <button onClick={() => removeIncomeSource(item.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                                                <Trash2 size={18} />
+                                            </button>
+                                         </div>
                                      </div>
                                  ))}
-                                 <button onClick={addIncomeSource} className="text-emerald-600 text-sm font-bold hover:underline flex items-center gap-1">
-                                     <Plus size={14} /> הוסף מקור הכנסה
+                                 <button onClick={addIncomeSource} className="text-emerald-600 text-sm font-bold hover:underline flex items-center gap-1 mt-2">
+                                     <Plus size={14} /> הוסף מקור הכנסה נוסף
                                  </button>
                              </div>
                          </div>
@@ -164,7 +163,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                              </div>
                              
                              {includeRealEstateRent && (
-                                 <div>
+                                 <div className="animate-fade-in">
                                      <div className="flex justify-between text-xs text-indigo-600 mb-1">
                                          <span>אחוז ההכנסה לתזרים: {rentInclusionPercentage}%</span>
                                          <span>{totalRentPotential.toLocaleString()} ₪ סה"כ</span>
@@ -174,7 +173,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                                         min="0" 
                                         max="100" 
                                         value={rentInclusionPercentage} 
-                                        onChange={(e) => setIncludeRealEstateRent(true)} // This was a placeholder, actual logic is in useEffect
+                                        onChange={(e) => setIncludeRealEstateRent(true)} 
                                         onInput={(e) => setRentInclusionPercentage(Number((e.target as HTMLInputElement).value))}
                                         className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                                      />
@@ -218,15 +217,12 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
-                    {/* Expenses - Swapped Position (Now Left on Desktop, but Flex Direction puts it first in markup usually if we want left on LTR, but here RTL so first is Right) */}
-                    {/* In RTL: First element is Right. So General Expense goes first. */}
-                    
                     {mode === 'simple' ? (
                         <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm flex flex-col justify-center min-h-[140px]">
                             <label className="block text-sm font-bold text-slate-700 mb-2">הוצאות שוטפות (ללא חובות)</label>
                             <NumberInput 
                                 value={generalExpense}
-                                onChange={(val) => setGeneralExpense(val)}
+                                onChange={(val) => setGeneralExpense(Number(val))}
                                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-500 outline-none font-bold text-xl"
                                 placeholder="לדוגמה: 15000"
                             />
@@ -234,7 +230,7 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                     ) : (
                         <div className="md:col-span-2 bg-white border border-slate-100 p-6 rounded-3xl shadow-sm animate-fade-in">
                             <h3 className="font-bold text-slate-800 mb-6">פירוט הוצאות (ללא הלוואות ומשכנתא)</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                 {EXPENSE_CATEGORIES.map(category => (
                                     <div key={category} className="bg-slate-50 p-3 rounded-xl border border-slate-100 focus-within:border-slate-300 focus-within:bg-white transition-colors">
                                         <label className="block text-xs font-bold text-slate-500 mb-1 truncate" title={category}>{category}</label>
@@ -250,10 +246,6 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                         </div>
                     )}
 
-                    {/* Debt Service Section - Now Second (Left in RTL) */}
-                    {/* Note: In standard CSS Grid, item 1 is top/left (LTR) or top/right (RTL). */}
-                    {/* To force Debt to left in RTL, it needs to be the second item if cols are 2. */}
-                    
                     <div className="bg-rose-50 border border-rose-100 p-6 rounded-2xl flex flex-col justify-center min-h-[140px]">
                         <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 bg-white rounded-full text-rose-500 shadow-sm"><CreditCard size={20}/></div>
@@ -270,8 +262,8 @@ const CashFlowTab: React.FC<CashFlowTabProps> = ({ data, loans, realEstate, onUp
                 </div>
 
                 {/* Total Summary */}
-                <div className="mt-8 bg-slate-900 text-white p-6 rounded-3xl flex justify-between items-center shadow-xl">
-                    <div>
+                <div className="mt-8 bg-slate-900 text-white p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+                    <div className="text-center md:text-right">
                         <p className="text-emerald-400 font-black mb-1 text-2xl">תזרים חודשי נטו</p>
                         <p className="text-sm opacity-60">הכנסות - (הוצאות + חובות)</p>
                     </div>
