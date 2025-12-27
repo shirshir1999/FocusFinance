@@ -89,7 +89,7 @@ const SwitchingCalculator: React.FC<SwitchingCalculatorProps> = ({ onClose }) =>
             </div>
 
             <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-                {/* Inputs */}
+                {/* Inputs (Right Side in RTL) */}
                 <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 lg:overflow-y-auto custom-scrollbar space-y-6 flex-shrink-0">
                     
                     <div className="space-y-4">
@@ -146,10 +146,10 @@ const SwitchingCalculator: React.FC<SwitchingCalculatorProps> = ({ onClose }) =>
 
                 </div>
 
-                {/* Results */}
-                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[300px]">
+                {/* Results (Left Side in RTL) - Made Scrollable */}
+                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white overflow-y-auto custom-scrollbar">
                      
-                     <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm leading-relaxed text-slate-600">
+                     <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-sm leading-relaxed text-slate-600 flex-shrink-0">
                         {finalDiff > 0 ? (
                             <p>
                                 <span className="font-bold text-emerald-600 block mb-1 text-lg">
@@ -172,9 +172,9 @@ const SwitchingCalculator: React.FC<SwitchingCalculatorProps> = ({ onClose }) =>
                         )}
                      </div>
 
-                     <div className="flex-1 w-full relative">
+                     <div className="w-full h-[350px] relative flex-shrink-0">
                         <h4 className="text-xs font-bold text-slate-400 absolute top-0 right-0">תחזית ל-30 שנה</h4>
-                        <ResponsiveContainer width="100%" height="100%" minHeight={250}>
+                        <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData} margin={{ top: 25, right: 30, left: 30, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="colorKeep" x1="0" y1="0" x2="0" y2="1">
@@ -207,18 +207,18 @@ const SwitchingCalculator: React.FC<SwitchingCalculatorProps> = ({ onClose }) =>
                         </ResponsiveContainer>
                      </div>
 
-                     {/* Excellence Banner */}
-                     <div className="mt-4 p-4 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg flex-shrink-0">
+                     {/* Excellence Banner - Now fully visible due to parent scroll */}
+                     <div className="mt-6 p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg flex-shrink-0">
                         <div>
-                            <p className="text-white font-bold text-sm text-lg">חבל לשלם סתם דמי ניהול גבוהים!</p>
-                            <p className="text-emerald-400 font-bold text-xs mt-1">פטור מדמי ניהול לשנתיים (אח"כ 15 ₪ שמתקזזים) | עמלות 0.07% (מינימום 3 ₪) | 100 ₪ מתנה | מינימום 15,000 ₪</p>
-                            <p className="text-white/80 text-[10px] mt-1">* גילוי נאות: כלקוח קיים אני מתוגמל על הפניה זו.</p>
+                            <p className="text-white font-bold text-lg">חבל לשלם סתם דמי ניהול גבוהים!</p>
+                            <p className="text-emerald-400 font-bold text-sm mt-1">פטור מדמי ניהול לשנתיים (אח"כ 15 ₪ שמתקזזים) | עמלות 0.07% (מינימום 3 ₪) | 100 ₪ מתנה | מינימום 15,000 ₪</p>
+                            <p className="text-white/80 text-xs mt-2">* גילוי נאות: כלקוח קיים אני מתוגמל על הפניה זו.</p>
                         </div>
                         <a 
                             href="https://xnestrade.xnes.co.il/page/101?customerCode=6abde1d2" 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-xl text-sm transition whitespace-nowrap shadow-lg shadow-emerald-900/50"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl text-sm transition whitespace-nowrap shadow-lg shadow-emerald-900/50"
                         >
                             לפתיחת חשבון באקסלנס טרייד
                         </a>

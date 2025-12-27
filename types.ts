@@ -117,7 +117,8 @@ export interface CashFlowState {
 }
 
 export interface FinancialState {
-  hasAcceptedTerms?: boolean; // New flag for ToS acceptance
+  hasAcceptedTerms?: boolean; // Flag for ToS acceptance
+  termsAcceptedAt?: string; // Timestamp of acceptance for audit
   profiles?: UserProfile[]; // List of people
   accounts: AccountItem[];
   pensions: PensionItem[];

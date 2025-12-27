@@ -174,7 +174,11 @@ const App: React.FC = () => {
   };
 
   const handleAcceptTerms = () => {
-      setData(prev => ({ ...prev, hasAcceptedTerms: true }));
+      setData(prev => ({ 
+          ...prev, 
+          hasAcceptedTerms: true,
+          termsAcceptedAt: new Date().toISOString()
+      }));
       setShowTerms(false);
       // Automatically open Help Guide after accepting terms for the first time
       setIsHelpOpen(true);
