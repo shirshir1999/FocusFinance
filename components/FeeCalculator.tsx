@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ArrowRight, Percent, Info } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -97,9 +98,9 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
                 {/* Inputs */}
-                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 overflow-y-auto custom-scrollbar space-y-4 md:space-y-6 flex-shrink-0">
+                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 lg:overflow-y-auto custom-scrollbar space-y-4 md:space-y-6 flex-shrink-0">
                     
                     <div className="space-y-3">
                         <h3 className="font-bold text-slate-800 text-sm md:text-base">נתוני בסיס</h3>
@@ -162,7 +163,7 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ onClose, initialFees }) =
                 </div>
 
                 {/* Results */}
-                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white overflow-hidden min-h-[300px]">
+                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[300px]">
                      
                      <div className="grid grid-cols-2 gap-4 mb-4">
                          <div className="bg-slate-50 p-4 rounded-2xl border border-red-100/50 text-center">

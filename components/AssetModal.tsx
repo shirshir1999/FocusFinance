@@ -36,6 +36,7 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   const [transType, setTransType] = useState<'buy' | 'sell'>('buy');
   const [transUnits, setTransUnits] = useState('');
   const [transPrice, setTransPrice] = useState(''); 
+  const [transCurrentPrice, setTransCurrentPrice] = useState(''); // New: Allow updating current price during transaction
 
   // --- STATE: Settings (Static Details) ---
   const [editName, setEditName] = useState(item.name);
@@ -159,17 +160,21 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
 
   // --- Transaction Logic ---
   const openTransaction = (id: string, type: 'buy' | 'sell') => {
+      const holding = holdings.find(h => h.id === id);
       setTransactingHolding(id);
       setTransType(type);
       setTransUnits('');
       setTransPrice('');
+      setTransCurrentPrice(holding ? holding.currentPrice.toString() : '');
   };
   const submitTransaction = () => {
     if (!transactingHolding) return;
     const holding = holdings.find(h => h.id === transactingHolding);
     if (!holding) return;
     const tUnits = Number(transUnits);
-    const tPrice = Number(transPrice); 
+    const tPrice = Number(transPrice);
+    const tCurrentPrice = Number(transCurrentPrice); 
+
     if (isNaN(tUnits) || tUnits <= 0) return;
     let newUnits = holding.units;
     let newBuyPrice = holding.buyPrice;
@@ -183,7 +188,15 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
         // Sell logic (FIFO is implicit in simple tracking by reducing count but keeping avg cost)
         newUnits = Math.max(0, holding.units - tUnits);
     }
-    setHoldings(holdings.map(h => h.id === transactingHolding ? { ...h, units: newUnits, buyPrice: newBuyPrice } : h));
+    
+    const updatedHolding = { ...holding, units: newUnits, buyPrice: newBuyPrice };
+    
+    // Update current price if provided
+    if (!isNaN(tCurrentPrice) && tCurrentPrice > 0) {
+        updatedHolding.currentPrice = tCurrentPrice;
+    }
+
+    setHoldings(holdings.map(h => h.id === transactingHolding ? updatedHolding : h));
     setTransactingHolding(null);
   };
 
@@ -333,98 +346,145 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                 </button>
                             </div>
 
-                            {/* Holdings Table */}
+                            {/* Holdings List (Responsive Grid/Cards) */}
                             {isInvestWithHoldings && (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-right min-w-[900px]">
-                                       <thead className="text-slate-400 font-medium text-xs uppercase bg-slate-50">
-                                            <tr>
-                                                <th className="p-3 w-[100px] rounded-r-xl">סימול</th>
-                                                <th className="p-3 w-[140px]">שם</th>
-                                                <th className="p-3 w-[80px]">מטבע</th>
-                                                <th className="p-3 w-[180px]">כמות / פעולות</th>
-                                                <th className="p-3 w-[110px]">שער קנייה</th>
-                                                <th className="p-3 w-[110px]">שער נוכחי</th>
-                                                <th className="p-3 w-[140px]">רווח/הפסד</th>
-                                                <th className="p-3 w-[120px]">שווי</th>
-                                                <th className="p-3 w-[50px] rounded-l-xl"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {holdings.map(h => {
-                                                let multiplier = 1;
-                                                if (h.currency === 'USD') multiplier = 3.65;
-                                                if (h.currency === 'EUR') multiplier = 4.0;
-                                                if (h.currency === 'AGOROT') multiplier = 0.01;
+                                <div className="space-y-3">
+                                    {/* Header Row - Desktop Only */}
+                                    <div className="hidden md:grid grid-cols-12 gap-3 mb-2 text-xs font-bold text-slate-500 px-3">
+                                        <div className="col-span-2">סימול</div>
+                                        <div className="col-span-2">שם</div>
+                                        <div className="col-span-1">מטבע</div>
+                                        <div className="col-span-1">כמות</div>
+                                        <div className="col-span-1">מחיר קניה</div>
+                                        <div className="col-span-1">מחיר נוכחי</div>
+                                        <div className="col-span-2 text-center">רווח/הפסד</div>
+                                        <div className="col-span-2">שווי</div>
+                                    </div>
 
-                                                const val = h.units * h.currentPrice * multiplier;
-                                                const buyVal = h.units * h.buyPrice * multiplier;
-                                                const profit = val - buyVal;
-                                                const profitPercent = buyVal > 0 ? (profit / buyVal) * 100 : 0;
-                                                const isTransacting = transactingHolding === h.id;
+                                    {holdings.map(h => {
+                                        let multiplier = 1;
+                                        if (h.currency === 'USD') multiplier = 3.65;
+                                        if (h.currency === 'EUR') multiplier = 4.0;
+                                        if (h.currency === 'AGOROT') multiplier = 0.01;
+
+                                        const val = h.units * h.currentPrice * multiplier;
+                                        const buyVal = h.units * h.buyPrice * multiplier;
+                                        const profit = val - buyVal;
+                                        const profitPercent = buyVal > 0 ? (profit / buyVal) * 100 : 0;
+                                        const isTransacting = transactingHolding === h.id;
+                                        
+                                        return (
+                                          <div key={h.id} className={`bg-slate-50 p-4 rounded-xl border transition-colors relative group ${isTransacting ? 'border-blue-300 bg-blue-50/30' : 'border-slate-100 shadow-sm'}`}>
+                                            
+                                            {/* Holding Row */}
+                                            <div className="grid grid-cols-2 md:grid-cols-12 gap-4 md:gap-3 items-center">
+                                                {/* Symbol */}
+                                                <div className="col-span-1 md:col-span-2">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">סימול</label>
+                                                    <input type="text" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" />
+                                                </div>
                                                 
-                                                return (
-                                                  <React.Fragment key={h.id}>
-                                                    <tr className={`hover:bg-slate-50 transition-colors ${isTransacting ? 'bg-blue-50/50' : ''}`}>
-                                                        <td className="p-3"><input type="text" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" /></td>
-                                                        <td className="p-3"><input type="text" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" /></td>
-                                                        <td className="p-3">
-                                                            <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-transparent border-b border-transparent text-xs outline-none">
-                                                                <option value="ILS">₪</option>
-                                                                <option value="USD">$</option>
-                                                                <option value="EUR">€</option>
-                                                                <option value="AGOROT">אג'</option>
-                                                            </select>
-                                                        </td>
-                                                        <td className="p-3">
-                                                            <div className="flex flex-col gap-2">
-                                                                 <span className="font-mono font-bold text-center">{h.units.toLocaleString()} יח'</span>
-                                                                 <div className="flex gap-2 justify-center">
-                                                                     <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="flex-1 px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-xs font-bold transition">קניה</button>
-                                                                     <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="flex-1 px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-bold transition">מכירה</button>
-                                                                 </div>
+                                                {/* Name */}
+                                                <div className="col-span-1 md:col-span-2">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שם</label>
+                                                    <input type="text" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" />
+                                                </div>
+                                                
+                                                {/* Currency */}
+                                                <div className="col-span-1 md:col-span-1">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מטבע</label>
+                                                    <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-transparent border-b border-transparent text-xs outline-none">
+                                                        <option value="ILS">₪</option>
+                                                        <option value="USD">$</option>
+                                                        <option value="EUR">€</option>
+                                                        <option value="AGOROT">אג'</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                {/* Quantity/Actions */}
+                                                <div className="col-span-1 md:col-span-1">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">כמות</label>
+                                                    <div className="flex flex-col gap-2">
+                                                         <span className="font-mono font-bold text-center">{h.units.toLocaleString()}</span>
+                                                         <div className="flex gap-1 justify-center md:hidden">
+                                                             <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="flex-1 px-1 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold">קניה</button>
+                                                             <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="flex-1 px-1 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold">מכירה</button>
+                                                         </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Buy Price */}
+                                                <div className="col-span-1 md:col-span-1 font-mono text-slate-500">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר קניה</label>
+                                                    {h.buyPrice.toLocaleString()}
+                                                </div>
+                                                
+                                                {/* Current Price */}
+                                                <div className="col-span-1 md:col-span-1">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר נוכחי</label>
+                                                    <NumberInput value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} className="w-full bg-transparent border-b border-slate-200 focus:border-emerald-500 outline-none font-bold" placeholder="0" />
+                                                </div>
+                                                
+                                                {/* Profit */}
+                                                <div className={`col-span-1 md:col-span-2 font-mono ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'} text-center md:text-right`}>
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">רווח/הפסד</label>
+                                                    <div className="text-base font-black">{profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                                                    <div className="opacity-80 text-xs font-bold dir-ltr">{profitPercent.toFixed(2)}%</div>
+                                                </div>
+                                                
+                                                {/* Value */}
+                                                <div className="col-span-1 md:col-span-2">
+                                                    <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שווי</label>
+                                                    <div className="font-mono font-bold text-slate-700 text-lg">{formatCurrency(val)}</div>
+                                                </div>
+
+                                                {/* Desktop Delete Button */}
+                                                <button type="button" onClick={() => removeHolding(h.id)} className="hidden md:block absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-500 transition"><Trash2 size={18}/></button>
+                                                
+                                                {/* Mobile Delete Button */}
+                                                <button type="button" onClick={() => removeHolding(h.id)} className="md:hidden absolute top-2 left-2 text-slate-300 hover:text-red-500 bg-white p-1 rounded-full shadow-sm"><Trash2 size={14}/></button>
+                                            </div>
+
+                                            {/* Transaction UI - Nested inside card on mobile, expanded row logic */}
+                                            {isTransacting && (
+                                                <div className="mt-4 pt-4 border-t border-blue-200">
+                                                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 text-sm bg-white p-3 rounded-xl border border-blue-100 shadow-sm animate-fade-in">
+                                                        <div className={`font-bold ${transType === 'buy' ? 'text-emerald-600' : 'text-red-500'} flex items-center gap-1`}>
+                                                            {transType === 'buy' ? <ShoppingCart size={16}/> : <DollarSign size={16}/>}
+                                                            {transType === 'buy' ? 'קניה / הוספה' : 'מכירה / מימוש'}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-4 items-center w-full md:w-auto">
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-slate-500 text-xs">כמות:</label>
+                                                                <NumberInput value={transUnits} onChange={val => setTransUnits(val.toString())} className="w-24 p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" placeholder="0" autoFocus />
                                                             </div>
-                                                        </td>
-                                                        <td className="p-3 font-mono text-slate-500">{h.buyPrice.toLocaleString()}</td>
-                                                        <td className="p-3"><NumberInput value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} className="w-full bg-transparent border-b border-slate-200 focus:border-emerald-500 outline-none font-bold" placeholder="0" /></td>
-                                                        <td className={`p-3 font-mono ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                            <div className="text-base font-black">{profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                                                            <div className="opacity-80 text-xs font-bold dir-ltr text-right">{profitPercent.toFixed(2)}%</div>
-                                                        </td>
-                                                        <td className="p-3 font-mono font-bold text-slate-700 text-lg">{formatCurrency(val)}</td>
-                                                        <td className="p-3 text-center"><button type="button" onClick={() => removeHolding(h.id)} className="text-slate-300 hover:text-red-500 transition"><Trash2 size={18}/></button></td>
-                                                    </tr>
-                                                    {isTransacting && (
-                                                        <tr className="bg-blue-50/50">
-                                                            <td colSpan={9} className="p-3">
-                                                                <div className="flex items-center gap-4 text-sm bg-white p-3 rounded-xl border border-blue-100 shadow-sm animate-fade-in">
-                                                                    <div className={`font-bold ${transType === 'buy' ? 'text-emerald-600' : 'text-red-500'} flex items-center gap-1`}>
-                                                                        {transType === 'buy' ? <ShoppingCart size={16}/> : <DollarSign size={16}/>}
-                                                                        {transType === 'buy' ? 'קניה / הוספה' : 'מכירה / מימוש'}
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <label className="text-slate-500 text-xs">כמות:</label>
-                                                                        <NumberInput value={transUnits} onChange={val => setTransUnits(val.toString())} className="w-24 p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" placeholder="0" autoFocus />
-                                                                    </div>
-                                                                    {transType === 'buy' && (
-                                                                        <div className="flex items-center gap-2">
-                                                                            <label className="text-slate-500 text-xs">מחיר ליחידה:</label>
-                                                                            <NumberInput value={transPrice} onChange={val => setTransPrice(val.toString())} className="w-24 p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" placeholder="מחיר" />
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="mr-auto flex gap-2">
-                                                                        <button type="button" onClick={submitTransaction} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-xs shadow-md">ביצוע</button>
-                                                                        <button type="button" onClick={() => setTransactingHolding(null)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg text-xs font-medium">ביטול</button>
-                                                                    </div>
+                                                            {transType === 'buy' && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <label className="text-slate-500 text-xs">מחיר ליחידה:</label>
+                                                                    <NumberInput value={transPrice} onChange={val => setTransPrice(val.toString())} className="w-24 p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" placeholder="מחיר" />
                                                                 </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                  </React.Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                            )}
+                                                            <div className="flex items-center gap-2 border-r border-slate-100 pr-4">
+                                                                <label className="text-slate-500 text-xs font-bold text-blue-600">עדכן שער נוכחי:</label>
+                                                                <NumberInput value={transCurrentPrice} onChange={val => setTransCurrentPrice(val.toString())} className="w-24 p-2 border border-blue-200 bg-blue-50 rounded-lg outline-none focus:border-blue-500 font-bold" placeholder="שער" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="mr-auto flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                                                            <button type="button" onClick={submitTransaction} className="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-xs shadow-md">ביצוע</button>
+                                                            <button type="button" onClick={() => setTransactingHolding(null)} className="flex-1 md:flex-none px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg text-xs font-medium">ביטול</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Desktop Quick Actions */}
+                                            <div className="hidden md:flex absolute left-12 top-1/2 -translate-y-1/2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                 <button type="button" onClick={() => openTransaction(h.id, 'buy')} className="px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-xs font-bold transition">קניה</button>
+                                                 <button type="button" onClick={() => openTransaction(h.id, 'sell')} className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-xs font-bold transition">מכירה</button>
+                                            </div>
+                                          </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                          </div>

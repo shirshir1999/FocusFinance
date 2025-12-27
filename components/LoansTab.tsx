@@ -28,14 +28,14 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
   const [interest, setInterest] = useState('');
   
   // New Calculator Fields
-  const [loanType, setLoanType] = useState<'spitzer' | 'balloon'>('spitzer');
+  const [loanType, setLoanType] = useState<'spitzer' | 'balloon_partial' | 'balloon_full'>('spitzer');
   const [durationMonths, setDurationMonths] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [totalInterest, setTotalInterest] = useState(0);
 
   // Auto Calculate Monthly Payment when inputs change
   useEffect(() => {
-      const P = Number(balance); // Using Balance as Principal for calc if it's a new loan, otherwise Original Amount should be used but simplistic here
+      const P = Number(balance); // Using Balance as Principal for calc if it's a new loan
       const principal = Number(originalAmount) || Number(balance);
       const r = Number(interest) / 100;
       const n = Number(durationMonths);
@@ -43,22 +43,26 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
       if (principal > 0 && n > 0) {
           let pmt = 0;
           let totInt = 0;
+          const i = r / 12;
 
           if (loanType === 'spitzer') {
-              // PMT = P * (r/12 * (1 + r/12)^n) / ((1 + r/12)^n - 1)
-              const i = r / 12;
+              // Spitzer: PMT = P * (i * (1 + i)^n) / ((1 + i)^n - 1)
               if (i === 0) {
                   pmt = principal / n;
               } else {
                   pmt = principal * ( (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) );
               }
               totInt = (pmt * n) - principal;
+          } else if (loanType === 'balloon_partial') {
+              // Partial Balloon (Grace/Interest Only): Monthly = Interest on Principal. Principal at end.
+              pmt = principal * i;
+              totInt = pmt * n; // Total interest paid over the period
           } else {
-              // Balloon (Interest Only usually, or Full Balloon at end)
-              // Assuming Interest Only for monthly payment context
-              // PMT = P * r / 12
-              pmt = (principal * r) / 12;
-              totInt = (pmt * n); // Simple interest accumulation
+              // Full Balloon: 0 Monthly. Everything at end.
+              // Compound Interest Calculation: Future Value = P * (1 + i)^n
+              pmt = 0;
+              const futureValue = principal * Math.pow(1 + i, n);
+              totInt = futureValue - principal;
           }
           
           setMonthlyPayment(pmt.toFixed(0));
@@ -103,6 +107,16 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
 
   const openItem = (item: LoanItem) => {
       setSelectedItem(item);
+  };
+
+  const getLoanTypeLabel = (type: string) => {
+      switch(type) {
+          case 'spitzer': return 'שפיצר';
+          case 'balloon_partial': return 'בלון חלקי (ריבית)';
+          case 'balloon_full': return 'בלון מלא';
+          case 'balloon': return 'בלון'; // Backwards compatibility
+          default: return 'הלוואה';
+      }
   };
 
   // Inline Detail View
@@ -195,7 +209,7 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                                <div className="flex items-center justify-center gap-4 text-xs text-slate-500 bg-slate-50 p-2 rounded-xl mt-2">
                                    <span className="font-medium">ריבית: {item.interestRate}%</span>
                                    <span className="w-px h-3 bg-slate-300"></span>
-                                   <span className="font-medium">{item.loanType === 'spitzer' ? 'שפיצר' : 'בלון'}</span>
+                                   <span className="font-medium">{getLoanTypeLabel(item.loanType)}</span>
                                </div>
                            </div>
                        </div>
@@ -276,10 +290,11 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                             <select 
                                 value={loanType} 
                                 onChange={(e) => setLoanType(e.target.value as any)}
-                                className="w-full p-3 bg-white border border-rose-200 rounded-2xl text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none transition appearance-none shadow-sm"
+                                className="w-full p-3 bg-white border border-rose-200 rounded-2xl text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none transition appearance-none shadow-sm cursor-pointer"
                             >
                                 <option value="spitzer">שפיצר (החזר קבוע)</option>
-                                <option value="balloon">בלון (ריבית בלבד)</option>
+                                <option value="balloon_partial">בלון חלקי (תשלומי ריבית בלבד)</option>
+                                <option value="balloon_full">בלון מלא (תשלום קרן+ריבית בסוף)</option>
                             </select>
                         </div>
 

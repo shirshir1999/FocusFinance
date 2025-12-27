@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { FinancialState } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -91,9 +92,9 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
                 {/* Controls Sidebar */}
-                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 overflow-y-auto custom-scrollbar flex-shrink-0 lg:flex-shrink">
+                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 lg:overflow-y-auto custom-scrollbar flex-shrink-0">
                     
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-3">
@@ -179,7 +180,7 @@ const FutureProjection: React.FC<FutureProjectionProps> = ({ data, onClose }) =>
                 </div>
 
                 {/* Chart Area */}
-                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white overflow-hidden min-h-[300px]">
+                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[300px]">
                      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 md:mb-8 gap-2 flex-shrink-0">
                          <div>
                              <p className="text-slate-500 font-medium text-xs md:text-sm">סכום חזוי בעוד {years} שנים</p>

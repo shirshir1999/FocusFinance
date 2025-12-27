@@ -244,7 +244,6 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                 </h3>
                 
                 <form onSubmit={handleAdd} className="space-y-6">
-                    {/* ... Form Content Identical to previous turn ... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700">סוג הנכס</label>
@@ -347,10 +346,11 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                                 </button>
                             </div>
                             
-                            <div className="overflow-x-auto">
-                                {/* Header Row */}
+                            {/* Responsive Grid/List for Holdings */}
+                            <div className="space-y-3">
+                                {/* Header Row - Visible only on Desktop */}
                                 {holdings.length > 0 && (
-                                    <div className="grid grid-cols-12 gap-3 mb-3 text-xs font-bold text-slate-500 px-2 min-w-[900px]">
+                                    <div className="hidden md:grid grid-cols-12 gap-3 mb-2 text-xs font-bold text-slate-500 px-3">
                                         <div className="col-span-2">סימול</div>
                                         <div className="col-span-2">שם</div>
                                         <div className="col-span-1">מטבע</div>
@@ -362,61 +362,85 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                                     </div>
                                 )}
 
-                                <div className="min-w-[900px] space-y-2">
-                                    {holdings.map((h, idx) => {
-                                        let multiplier = 1;
-                                        if (h.currency === 'USD') multiplier = 3.65;
-                                        if (h.currency === 'EUR') multiplier = 4.0;
-                                        if (h.currency === 'AGOROT') multiplier = 0.01;
+                                {holdings.map((h, idx) => {
+                                    let multiplier = 1;
+                                    if (h.currency === 'USD') multiplier = 3.65;
+                                    if (h.currency === 'EUR') multiplier = 4.0;
+                                    if (h.currency === 'AGOROT') multiplier = 0.01;
 
-                                        const val = h.units * h.currentPrice * multiplier;
-                                        const buyVal = h.units * h.buyPrice * multiplier;
-                                        const profit = val - buyVal;
-                                        const weight = Number(value) > 0 ? (val / Number(value)) * 100 : 0;
+                                    const val = h.units * h.currentPrice * multiplier;
+                                    const buyVal = h.units * h.buyPrice * multiplier;
+                                    const profit = val - buyVal;
+                                    const weight = Number(value) > 0 ? (val / Number(value)) * 100 : 0;
 
-                                        return (
-                                        <div key={h.id} className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm relative group">
-                                            <div className="col-span-2">
-                                                <input type="text" placeholder="סימול" className="w-full p-2 text-sm border border-slate-200 rounded-lg" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} />
+                                    return (
+                                    <div key={h.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm relative group">
+                                        {/* Mobile: Vertical Stack / Desktop: Horizontal Grid */}
+                                        <div className="grid grid-cols-2 md:grid-cols-12 gap-4 md:gap-3 items-center">
+                                            
+                                            {/* Symbol */}
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">סימול</label>
+                                                <input type="text" placeholder="סימול" className="w-full p-2 text-sm border border-slate-200 rounded-lg focus:border-purple-500 outline-none" value={h.symbol} onChange={e => updateHolding(h.id, 'symbol', e.target.value)} />
                                             </div>
-                                            <div className="col-span-2">
-                                                <input type="text" placeholder="שם" className="w-full p-2 text-sm border border-slate-200 rounded-lg" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} />
+                                            
+                                            {/* Name */}
+                                            <div className="col-span-1 md:col-span-2">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שם</label>
+                                                <input type="text" placeholder="שם" className="w-full p-2 text-sm border border-slate-200 rounded-lg focus:border-purple-500 outline-none" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} />
                                             </div>
-                                            <div className="col-span-1">
-                                                <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full p-2 text-sm border border-slate-200 rounded-lg bg-white">
+                                            
+                                            {/* Currency */}
+                                            <div className="col-span-1 md:col-span-1">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מטבע</label>
+                                                <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full p-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-purple-500 outline-none">
                                                     <option value="AGOROT">אג'</option>
                                                     <option value="USD">$</option>
                                                     <option value="EUR">€</option>
                                                 </select>
                                             </div>
-                                            <div className="col-span-1">
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono" value={h.units} onChange={val => updateHolding(h.id, 'units', val)} />
+                                            
+                                            {/* Quantity */}
+                                            <div className="col-span-1 md:col-span-1">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">כמות</label>
+                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono focus:border-purple-500 outline-none" value={h.units} onChange={val => updateHolding(h.id, 'units', val)} />
                                             </div>
-                                            <div className="col-span-1">
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono" value={h.buyPrice} onChange={val => updateHolding(h.id, 'buyPrice', val)} />
+                                            
+                                            {/* Buy Price */}
+                                            <div className="col-span-1 md:col-span-1">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר קניה</label>
+                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-slate-200 rounded-lg font-mono focus:border-purple-500 outline-none" value={h.buyPrice} onChange={val => updateHolding(h.id, 'buyPrice', val)} />
                                             </div>
-                                            <div className="col-span-1">
-                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-purple-200 bg-purple-50/50 rounded-lg font-mono font-bold" value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} />
+                                            
+                                            {/* Current Price */}
+                                            <div className="col-span-1 md:col-span-1">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">מחיר נוכחי</label>
+                                                <NumberInput placeholder="0" className="w-full p-2 text-sm border border-purple-200 bg-purple-50/50 rounded-lg font-mono font-bold focus:border-purple-500 outline-none" value={h.currentPrice} onChange={val => updateHolding(h.id, 'currentPrice', val)} />
                                             </div>
-                                            <div className={`col-span-2 text-sm font-mono font-bold text-center ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                            
+                                            {/* Stats (Profit & Value) - Span full width on mobile or specific cols */}
+                                            <div className={`col-span-1 md:col-span-2 text-sm font-mono font-bold text-center md:text-right ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block text-right">רווח/הפסד</label>
                                                 {profit > 0 ? '+' : ''}{profit.toLocaleString(undefined, {maximumFractionDigits: 0})}
                                             </div>
-                                            <div className="col-span-2 flex justify-between items-center pl-2">
-                                                <div className="flex flex-col leading-none">
-                                                    <span className="text-sm font-bold text-slate-800">{formatCurrency(val)}</span>
-                                                    <span className="text-[10px] text-slate-400">{weight.toFixed(1)}%</span>
-                                                </div>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => removeHolding(h.id)}
-                                                    className="text-slate-300 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition"
-                                                >
-                                                    <X size={16} />
-                                                </button>
+                                            
+                                            <div className="col-span-1 md:col-span-2 flex flex-col justify-center">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 mb-1 block">שווי כולל</label>
+                                                <span className="text-sm font-bold text-slate-800">{formatCurrency(val)}</span>
+                                                <span className="text-[10px] text-slate-400 hidden md:inline">{weight.toFixed(1)}%</span>
                                             </div>
                                         </div>
-                                    )})}
-                                </div>
+
+                                        {/* Delete Button - Floating on mobile, inline on desktop */}
+                                        <button 
+                                            type="button" 
+                                            onClick={() => removeHolding(h.id)}
+                                            className="absolute top-2 left-2 md:static md:col-span-1 text-slate-300 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                )})}
                             </div>
                         </div>
                     )}

@@ -92,7 +92,7 @@ export interface RealEstateItem extends BaseItem {
 export interface LoanItem extends BaseItem {
     source: string; // Bank name / Entity
     purpose: string; // Car, Renovation, etc.
-    loanType: 'spitzer' | 'balloon'; // New
+    loanType: 'spitzer' | 'balloon_partial' | 'balloon_full'; // Updated Types
     durationMonths: number; // New
     originalAmount: number;
     monthlyPayment: number;

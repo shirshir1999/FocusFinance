@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { FinancialState, PensionItem } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -152,9 +153,9 @@ const PensionCalculator: React.FC<PensionCalculatorProps> = ({ data, onClose }) 
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
                 {/* Controls */}
-                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 overflow-y-auto custom-scrollbar flex-shrink-0">
+                <div className="w-full lg:w-1/3 bg-slate-50 p-4 md:p-6 border-l border-slate-100 lg:overflow-y-auto custom-scrollbar flex-shrink-0">
                     <div className="space-y-6">
                         
                         {/* Pension Section */}
@@ -234,7 +235,7 @@ const PensionCalculator: React.FC<PensionCalculatorProps> = ({ data, onClose }) 
                 </div>
 
                 {/* Results Area */}
-                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white overflow-hidden min-h-[400px]">
+                <div className="flex-1 p-4 md:p-6 flex flex-col bg-white lg:overflow-hidden min-h-[400px]">
                      
                      <div className="grid grid-cols-2 gap-4 mb-2">
                          <div className="bg-cyan-50 p-3 rounded-2xl border border-cyan-100 text-center">
