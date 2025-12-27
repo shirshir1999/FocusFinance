@@ -130,10 +130,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
       {/* Header Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <div className="flex items-center gap-3 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם">
+            <div className="flex items-center gap-3 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם הפרופיל">
                 <h2 className="text-3xl font-black text-slate-800 tracking-tight">שלום, {userName || 'אורח'}</h2>
-                <div className="bg-slate-100 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200">
-                    <Edit2 size={16} className="text-slate-500" />
+                <div className="bg-slate-100 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200 text-slate-500">
+                    <Edit2 size={16} />
                 </div>
             </div>
             <p className="text-slate-500">הנה תמונת המצב הפיננסית שלך להיום</p>
