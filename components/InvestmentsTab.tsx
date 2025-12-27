@@ -244,6 +244,7 @@ const InvestmentsTab: React.FC<InvestmentsTabProps> = ({ items, onAdd, onRemove,
                 </h3>
                 
                 <form onSubmit={handleAdd} className="space-y-6">
+                    {/* ... Form Content Identical to previous turn ... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700">סוג הנכס</label>

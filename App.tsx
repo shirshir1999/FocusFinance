@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import AccountsTab from './components/AccountsTab';
 import PensionTab from './components/PensionTab';
@@ -15,7 +15,7 @@ import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
 import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile } from './types';
-import { ExternalLink, AlertTriangle, LogOut, User, Loader2, ChevronDown, Plus, Edit2, Users, Info } from 'lucide-react';
+import { ExternalLink, AlertTriangle, LogOut, User, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
 import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys } from './services/supabase';
 
@@ -45,16 +45,32 @@ const App: React.FC = () => {
   const [data, setData] = useState<FinancialState>(initialData);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
 
   // Profile Management State
   const [activeProfileId, setActiveProfileId] = useState<string>('all');
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
-  const [isAddProfileOpen, setIsAddProfileOpen] = useState(false); // NEW: Modal state for add profile
+  const [isAddProfileOpen, setIsAddProfileOpen] = useState(false);
   const [newNameInput, setNewNameInput] = useState('');
   
+  // Profile Delete State
+  const [deleteProfileState, setDeleteProfileState] = useState<{
+      isOpen: boolean;
+      profileId: string | null;
+      step: 'confirm' | 'action'; // confirm deletion, action: what to do with assets
+      targetProfileId?: string; // If transferring
+  }>({ isOpen: false, profileId: null, step: 'confirm' });
+
   // Help Modal State
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+
+  // Scroll to top when view changes
+  useEffect(() => {
+      if (mainScrollRef.current) {
+          mainScrollRef.current.scrollTo(0, 0);
+      }
+  }, [activeView]);
 
   // 1. Listen for Auth Changes
   useEffect(() => {
@@ -91,21 +107,20 @@ const App: React.FC = () => {
                  cloudData.loans = assignOwner(cloudData.loans || []);
             }
             setData(cloudData);
-            // Default to main user if only one profile exists
+            
+            // If only one profile, ensure we are not in 'all' view logically (though 'all' works, UI should show user)
             if (cloudData.profiles.length === 1) {
                 setActiveProfileId(cloudData.profiles[0].id);
-            } else {
-                setActiveProfileId('all'); // Or specific logic
             }
         } else {
             // Init new user with default profile
             const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
-            const newProfile = { id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true };
+            const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
             setData({
                 ...initialData,
-                profiles: [newProfile]
+                profiles: newProfiles
             });
-            setActiveProfileId(newProfile.id);
+            setActiveProfileId('main');
         }
         setLoading(false);
       };
@@ -134,8 +149,15 @@ const App: React.FC = () => {
 
   // Helper: Get filtered data based on activeProfileId
   const getFilteredItems = (items: any[]) => {
+      // Logic for "All" view: Show everything (unique items).
       if (activeProfileId === 'all') return items;
-      return items.filter(i => i.ownerId === activeProfileId || i.isShared);
+      
+      // Logic for Specific Profile:
+      return items.filter(i => 
+          i.ownerId === activeProfileId || // Owned by me
+          i.isShared || // Shared globally
+          (i.sharedWithIds && i.sharedWithIds.includes(activeProfileId)) // Shared specifically with me
+      );
   };
   
   // When adding, assign owner
@@ -191,31 +213,66 @@ const App: React.FC = () => {
       const newProfile: UserProfile = { id: newId, name: newNameInput, color };
       
       setData(prev => ({ ...prev, profiles: [...(prev.profiles || []), newProfile] }));
-      setActiveProfileId(newId); // Switch to new profile dashboard
+      setActiveProfileId(newId);
       setIsAddProfileOpen(false);
       setNewNameInput('');
-      navigateTo('dashboard'); // Ensure we are on dashboard to see empty state
+      navigateTo('dashboard');
   };
 
   const handleEditName = () => {
       if (!newNameInput.trim()) return;
-      
-      // Determine target profile ID
-      let targetId = activeProfileId;
-      if (targetId === 'all') {
-          // Edit main user if in 'all' view
-          targetId = data.profiles?.find(p => p.isMainUser)?.id || '';
-      }
-      
-      if (!targetId) return;
-
+      // We assume user is editing the main profile name if on 'all' or main
+      const targetId = activeProfileId === 'all' ? data.profiles?.find(p=>p.isMainUser)?.id : activeProfileId;
       const updatedProfiles = data.profiles?.map(p => p.id === targetId ? { ...p, name: newNameInput } : p) || [];
       setData(prev => ({ ...prev, profiles: updatedProfiles }));
       setIsEditNameOpen(false);
       setNewNameInput('');
   };
 
+  const handleProfileDeleteInit = (e: React.MouseEvent, profileId: string) => {
+      e.stopPropagation();
+      setDeleteProfileState({ isOpen: true, profileId, step: 'confirm' });
+      setIsProfileMenuOpen(false);
+  };
+
+  const executeDeleteProfile = (action: 'delete_assets' | 'transfer_assets') => {
+      const { profileId, targetProfileId } = deleteProfileState;
+      if (!profileId) return;
+
+      let newData = { ...data };
+      
+      // 1. Remove Profile
+      newData.profiles = newData.profiles?.filter(p => p.id !== profileId) || [];
+
+      // 2. Handle Assets
+      const updateAssets = (items: any[]) => {
+          if (action === 'delete_assets') {
+              return items.filter(i => i.ownerId !== profileId);
+          } else if (action === 'transfer_assets' && targetProfileId) {
+              return items.map(i => i.ownerId === profileId ? { ...i, ownerId: targetProfileId } : i);
+          }
+          return items;
+      };
+
+      newData.accounts = updateAssets(newData.accounts);
+      newData.pensions = updateAssets(newData.pensions);
+      newData.investments = updateAssets(newData.investments);
+      newData.realEstate = updateAssets(newData.realEstate);
+      newData.loans = updateAssets(newData.loans);
+
+      setData(newData);
+      
+      // Reset view to remaining profile or main
+      if (activeProfileId === profileId) {
+          setActiveProfileId(newData.profiles[0]?.id || 'all');
+      }
+      setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' });
+  };
+
   const getMainUserName = () => {
+      if (activeProfileId !== 'all') {
+          return data.profiles?.find(p => p.id === activeProfileId)?.name;
+      }
       return data.profiles?.find(p => p.isMainUser)?.name || 'משתמש';
   };
 
@@ -244,19 +301,10 @@ const App: React.FC = () => {
     );
   }
 
+  const hasMultipleProfiles = (data.profiles?.length || 0) > 1;
+  const activeProfile = data.profiles?.find(p => p.id === activeProfileId);
+
   const renderContent = () => {
-    // Calculate display name for current view
-    const displayUserName = activeProfileId === 'all' 
-        ? (data.profiles?.find(p => p.isMainUser)?.name || 'משתמש')
-        : (data.profiles?.find(p => p.id === activeProfileId)?.name || 'משתמש');
-
-    const commonDashboardProps = {
-        userName: displayUserName,
-        onEditName: () => { setNewNameInput(displayUserName); setIsEditNameOpen(true); },
-        activeProfileId: activeProfileId,
-        profiles: data.profiles || []
-    };
-
     const commonModalProps = {
         profiles: data.profiles || [],
         activeProfileId: activeProfileId
@@ -274,7 +322,10 @@ const App: React.FC = () => {
                     loans: getFilteredItems(data.loans),
                 }}
                 onNavigate={navigateTo} 
-                {...commonDashboardProps}
+                userName={getMainUserName()} 
+                onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
+                activeProfileId={activeProfileId}
+                profiles={data.profiles || []}
             />
             <ModalComponent {...props} {...commonModalProps} onClose={() => navigateTo('dashboard')} />
         </>
@@ -313,7 +364,10 @@ const App: React.FC = () => {
                     loans: getFilteredItems(data.loans),
                 }} 
                 onNavigate={navigateTo} 
-                {...commonDashboardProps}
+                userName={getMainUserName()}
+                onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
+                activeProfileId={activeProfileId}
+                profiles={data.profiles || []}
             />
         );
       case 'accounts':
@@ -386,19 +440,21 @@ const App: React.FC = () => {
         return <Dashboard 
             data={data}
             onNavigate={navigateTo} 
-            {...commonDashboardProps}
+            userName={getMainUserName()}
+            onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
+            activeProfileId={activeProfileId}
+            profiles={data.profiles || []}
         />;
     }
   };
-
-  const activeProfile = data.profiles?.find(p => p.id === activeProfileId);
-  const multipleProfiles = (data.profiles?.length || 0) > 1;
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans overflow-hidden">
       
       <header className="bg-white border-b border-slate-200 z-30 shadow-sm flex-shrink-0">
           <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
+              
+              {/* Right Side: Logo */}
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigateTo('dashboard')}>
                   <TreeLogo className="w-10 h-10" />
                   <div>
@@ -407,8 +463,22 @@ const App: React.FC = () => {
                   </div>
               </div>
 
+              {/* Left Side: Controls & Links */}
               <div className="flex items-center gap-2 md:gap-4">
                   
+                  {/* Website Link (Far Left) */}
+                  <a 
+                    href="https://www.shirfinance.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-emerald-600 transition"
+                  >
+                      <span className="hidden sm:inline">לאתר שלי</span>
+                      <ExternalLink size={16} />
+                  </a>
+
+                  <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
+
                   {/* Help Button */}
                   <button 
                     onClick={() => setIsHelpOpen(true)}
@@ -418,33 +488,38 @@ const App: React.FC = () => {
                       <Info size={20} />
                   </button>
 
-                  <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
-
-                  {/* Profile Switcher */}
+                  {/* Profile Switcher & User Menu */}
                   <div className="relative">
                       <button 
                         onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                         className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-700 text-sm font-bold hover:bg-slate-200 transition"
                       >
-                         {activeProfileId === 'all' ? (
+                         {/* If Multi Profile, show Switcher State */}
+                         {hasMultipleProfiles && activeProfileId === 'all' && (
                              <div className="flex items-center gap-2">
                                  <div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div>
                                  <span className="hidden sm:inline">מבט כולל</span>
                              </div>
-                         ) : (
+                         )}
+                         
+                         {/* If Specific Profile OR Single User */}
+                         {(activeProfileId !== 'all' || !hasMultipleProfiles) && (
                              <div className="flex items-center gap-2">
-                                 <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: activeProfile?.color }}>
-                                     {activeProfile?.name[0]}
+                                 <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: activeProfile?.color || DEFAULT_PROFILE_COLOR }}>
+                                     {activeProfile?.name[0] || 'U'}
                                  </div>
-                                 <span className="hidden sm:inline">{activeProfile?.name}</span>
+                                 <span className="hidden sm:inline">{activeProfile?.name || 'משתמש'}</span>
                              </div>
                          )}
+                         
                          <ChevronDown size={14} className="text-slate-400"/>
                       </button>
 
                       {isProfileMenuOpen && (
-                          <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50">
-                              {multipleProfiles && (
+                          <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50">
+                              
+                              {/* Only show "Family View" and list if multiple profiles exist */}
+                              {hasMultipleProfiles && (
                                   <>
                                     <button 
                                         onClick={() => { setActiveProfileId('all'); setIsProfileMenuOpen(false); }}
@@ -454,22 +529,32 @@ const App: React.FC = () => {
                                         מבט משפחתי כולל
                                     </button>
                                     <div className="my-1 border-t border-slate-100"></div>
+                                    {data.profiles?.map(p => (
+                                        <div key={p.id} className="flex items-center justify-between px-2 hover:bg-slate-50 group">
+                                            <button 
+                                                onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }}
+                                                className="flex-1 text-right px-2 py-2 text-sm font-medium flex items-center gap-2"
+                                            >
+                                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>
+                                                    {p.name[0]}
+                                                </div>
+                                                {p.name}
+                                            </button>
+                                            {!p.isMainUser && (
+                                                <button 
+                                                    onClick={(e) => handleProfileDeleteInit(e, p.id)}
+                                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100"
+                                                    title="מחיקת פרופיל"
+                                                >
+                                                    <Trash2 size={14}/>
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div className="my-1 border-t border-slate-100"></div>
                                   </>
                               )}
-                              
-                              {data.profiles?.map(p => (
-                                  <button 
-                                    key={p.id}
-                                    onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }}
-                                    className="w-full text-right px-4 py-2 hover:bg-slate-50 text-sm font-medium flex items-center gap-2"
-                                  >
-                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>
-                                        {p.name[0]}
-                                    </div>
-                                    {p.name}
-                                  </button>
-                              ))}
-                              <div className="my-1 border-t border-slate-100"></div>
+
                               <button 
                                 onClick={() => { setIsAddProfileOpen(true); setIsProfileMenuOpen(false); }}
                                 className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-600 text-sm font-bold flex items-center gap-2"
@@ -477,28 +562,22 @@ const App: React.FC = () => {
                                   <Plus size={14}/>
                                   הוסף פרופיל
                               </button>
+                              <div className="my-1 border-t border-slate-100"></div>
+                              <button 
+                                onClick={() => { setIsProfileMenuOpen(false); handleLogout(); }}
+                                className="w-full text-right px-4 py-2 hover:bg-red-50 text-red-600 text-sm font-medium flex items-center gap-2"
+                              >
+                                  <LogOut size={14}/>
+                                  התנתקות
+                              </button>
                           </div>
                       )}
                   </div>
-
-                  {/* User Name (Read Only) */}
-                  <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-600 text-sm font-bold">
-                    <User size={16} className="text-slate-400" />
-                    <span>{getMainUserName()}</span>
-                  </div>
-
-                  <button 
-                    onClick={handleLogout}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
-                    title="התנתקות"
-                  >
-                    <LogOut size={20} />
-                  </button>
               </div>
           </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col" ref={mainScrollRef}>
           <main className="flex-1">
             {renderContent()}
           </main>
@@ -526,7 +605,7 @@ const App: React.FC = () => {
       {isEditNameOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}>
               <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם פרופיל</h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3>
                   <input 
                     type="text" 
                     value={newNameInput} 
@@ -564,6 +643,85 @@ const App: React.FC = () => {
                       <button onClick={() => setIsAddProfileOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button>
                       <button onClick={handleAddProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">הוסף פרופיל</button>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Delete Profile Modal */}
+      {deleteProfileState.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}>
+              <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                  <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                      <Trash2 size={32} />
+                  </div>
+                  <h3 className="font-black text-2xl text-slate-800 mb-2 text-center">מחיקת פרופיל</h3>
+                  
+                  {deleteProfileState.step === 'confirm' ? (
+                      <>
+                        <p className="text-slate-500 mb-8 leading-relaxed text-center">
+                            אתם עומדים למחוק את הפרופיל. מה תרצו לעשות עם הנכסים המשויכים אליו?
+                        </p>
+                        <div className="space-y-3">
+                            {data.profiles && data.profiles.length > 1 && (
+                                <button 
+                                    onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'action' }))}
+                                    className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between group transition"
+                                >
+                                    <span className="font-bold text-slate-700">העברת נכסים למשתמש אחר</span>
+                                    <ArrowRight size={20} className="text-slate-400 group-hover:text-slate-600"/>
+                                </button>
+                            )}
+                            <button 
+                                onClick={() => executeDeleteProfile('delete_assets')}
+                                className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 rounded-xl font-bold transition flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={18}/>
+                                מחיקת הפרופיל והנכסים שלו
+                            </button>
+                            <button 
+                                onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}
+                                className="w-full p-3 text-slate-400 hover:text-slate-600 text-sm font-medium mt-2"
+                            >
+                                ביטול
+                            </button>
+                        </div>
+                      </>
+                  ) : (
+                      <>
+                        <p className="text-slate-500 mb-6 leading-relaxed text-center">
+                            לאיזה משתמש תרצו להעביר את הנכסים?
+                        </p>
+                        <div className="space-y-2 mb-6 max-h-48 overflow-y-auto custom-scrollbar">
+                            {data.profiles?.filter(p => p.id !== deleteProfileState.profileId).map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => setDeleteProfileState(prev => ({ ...prev, targetProfileId: p.id }))}
+                                    className={`w-full p-3 rounded-xl flex items-center gap-3 border transition ${deleteProfileState.targetProfileId === p.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:bg-slate-50'}`}
+                                >
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0" style={{ backgroundColor: p.color }}>
+                                        {p.name[0]}
+                                    </div>
+                                    <span className="font-bold text-slate-700">{p.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'confirm', targetProfileId: undefined }))}
+                                className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl"
+                            >
+                                חזרה
+                            </button>
+                            <button 
+                                onClick={() => executeDeleteProfile('transfer_assets')}
+                                disabled={!deleteProfileState.targetProfileId}
+                                className="flex-1 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                אשר העברה ומחיקה
+                            </button>
+                        </div>
+                      </>
+                  )}
               </div>
           </div>
       )}

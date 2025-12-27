@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BaseItem, HistoryEntry, PensionItem, InvestmentItem, RealEstateItem, AssetCategory, MortgageTrack, InvestmentHolding, UserProfile } from '../types';
-import { X, Save, TrendingUp, History, Settings, Plus, Trash2, Table, Edit2, Check, DollarSign, ShoppingCart, GripHorizontal, Users, ArrowRight, CreditCard } from 'lucide-react';
+import { X, Save, TrendingUp, History, Settings, Plus, Trash2, Table, Edit2, Check, DollarSign, ShoppingCart, GripHorizontal, Users, ArrowRight, CreditCard, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import NumberInput from './NumberInput';
 
@@ -49,9 +49,13 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   const [editBank, setEditBank] = useState((item as RealEstateItem).mortgageBank || '');
   const [mortgageTracks, setMortgageTracks] = useState<MortgageTrack[]>([]);
   
-  // Ownership
+  // Ownership & Sharing
   const [editOwner, setEditOwner] = useState(item.ownerId || (activeProfileId !== 'all' ? activeProfileId : profiles[0]?.id));
   const [editIsShared, setEditIsShared] = useState(item.isShared || false);
+  const [editSharedWith, setEditSharedWith] = useState<string[]>([]);
+  
+  // UI State for Accordion
+  const [isSpecificSharingOpen, setIsSpecificSharingOpen] = useState(false);
 
   // Local History (Immediate UI update)
   const [localHistory, setLocalHistory] = useState<HistoryEntry[]>([]);
@@ -79,6 +83,10 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
         // Ownership State
         setEditOwner(item.ownerId || (activeProfileId !== 'all' ? activeProfileId : profiles[0]?.id));
         setEditIsShared(item.isShared || false);
+        setEditSharedWith(item.sharedWithIds || []);
+        
+        // Auto-open specific sharing if there are shared IDs
+        setIsSpecificSharingOpen(!!(item.sharedWithIds && item.sharedWithIds.length > 0));
 
         // Complex Data
         if (category === 'realEstate') {
@@ -111,6 +119,16 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
       }
   }, [holdings, category]);
 
+  // --- Toggle specific profile sharing ---
+  const toggleSharedProfile = (profileId: string) => {
+      setEditSharedWith(prev => {
+          if (prev.includes(profileId)) {
+              return prev.filter(id => id !== profileId);
+          }
+          return [...prev, profileId];
+      });
+  };
+
   // --- Mortgage Logic (Settings) ---
   const addTrack = () => setMortgageTracks([...mortgageTracks, { id: Date.now().toString(), name: '', type: 'kalatz', originalAmount: 0, balance: 0, yearsTotal: 25, yearsRemaining: 25, interestRate: 0, monthlyPayment: 0 }]);
   const removeTrack = (id: string) => setMortgageTracks(mortgageTracks.filter(t => t.id !== id));
@@ -118,7 +136,7 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
       const updated = mortgageTracks.map(t => {
           if(t.id !== id) return t;
           const newTrack = { ...t, [field]: value };
-          if (['balance', 'yearsRemaining', 'interestRate'].includes(field)) {
+          if (['balance', 'yearsRemaining', 'interestRate'].includes(field as string)) {
               const P = field === 'balance' ? Number(value) : t.balance;
               const years = field === 'yearsRemaining' ? Number(value) : t.yearsRemaining;
               const rate = field === 'interestRate' ? Number(value) : t.interestRate;
@@ -135,7 +153,7 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
   };
 
   // --- Holdings Logic (Management) ---
-  const addHolding = () => setHoldings([...holdings, { id: Date.now().toString(), symbol: '', name: '', units: 0, currency: 'AGOROT', buyPrice: 0, currentPrice: 0 }]);
+  const addHolding = () => setHoldings([...holdings, { id: Date.now().toString(), symbol: '', name: '', units: 0, currency: 'ILS', buyPrice: 0, currentPrice: 0 }]);
   const removeHolding = (id: string) => setHoldings(holdings.filter(h => h.id !== id));
   const updateHolding = (id: string, field: keyof InvestmentHolding, value: any) => setHoldings(holdings.map(h => h.id === id ? { ...h, [field]: value } : h));
 
@@ -203,7 +221,8 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
           ...item, 
           name: editName,
           ownerId: editOwner,
-          isShared: editIsShared
+          isShared: editIsShared,
+          sharedWithIds: editSharedWith
       } as any;
 
       if (category === 'pensions') {
@@ -351,9 +370,10 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                                                         <td className="p-3"><input type="text" value={h.name} onChange={e => updateHolding(h.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-emerald-500 outline-none transition" placeholder="---" /></td>
                                                         <td className="p-3">
                                                             <select value={h.currency} onChange={e => updateHolding(h.id, 'currency', e.target.value)} className="w-full bg-transparent border-b border-transparent text-xs outline-none">
-                                                                <option value="AGOROT">אג'</option>
+                                                                <option value="ILS">₪</option>
                                                                 <option value="USD">$</option>
                                                                 <option value="EUR">€</option>
+                                                                <option value="AGOROT">אג'</option>
                                                             </select>
                                                         </td>
                                                         <td className="p-3">
@@ -518,30 +538,81 @@ const AssetModal: React.FC<AssetModalProps> = ({ item, category, onClose, onUpda
                         </h3>
                         <form onSubmit={handleSettingsSave} className="space-y-8">
                             
-                            {/* Ownership - Only show sharing options if multiple profiles exist */}
+                            {/* Ownership & Sharing - Only show sharing options if multiple profiles exist */}
                             {multipleProfiles && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">בעל הנכס</label>
-                                        <select 
-                                            value={editOwner} 
-                                            onChange={(e) => setEditOwner(e.target.value)}
-                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition cursor-pointer"
-                                        >
-                                            {profiles.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">הגדרות שיתוף</label>
-                                        <div className={`p-4 rounded-2xl border flex items-center gap-3 cursor-pointer transition h-[58px] ${editIsShared ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`} onClick={() => setEditIsShared(!editIsShared)}>
-                                            <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition ${editIsShared ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300'}`}>
-                                                {editIsShared && <Check size={16}/>}
+                                <div className="grid grid-cols-1 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">בעל הנכס</label>
+                                            <select 
+                                                value={editOwner} 
+                                                onChange={(e) => {
+                                                    setEditOwner(e.target.value);
+                                                    // Ensure owner is not in shared list
+                                                    if(editSharedWith.includes(e.target.value)) {
+                                                        setEditSharedWith(prev => prev.filter(id => id !== e.target.value));
+                                                    }
+                                                }}
+                                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition cursor-pointer"
+                                            >
+                                                {profiles.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">הגדרות שיתוף גלובליות</label>
+                                            <div className={`p-4 rounded-2xl border flex items-center gap-3 cursor-pointer transition h-[58px] ${editIsShared ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`} onClick={() => setEditIsShared(!editIsShared)}>
+                                                <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition ${editIsShared ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300'}`}>
+                                                    {editIsShared && <Check size={16}/>}
+                                                </div>
+                                                <span className="font-bold text-sm flex items-center gap-2"><Users size={18}/> נכס משותף לכולם (ציבורי)</span>
                                             </div>
-                                            <span className="font-bold text-sm flex items-center gap-2"><Users size={18}/> נכס משותף לכל הפרופילים</span>
                                         </div>
                                     </div>
+
+                                    {/* Granular Sharing - Only show if NOT globally shared */}
+                                    {!editIsShared && (
+                                        <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsSpecificSharingOpen(!isSpecificSharingOpen)}
+                                                className="w-full flex items-center justify-between p-4 text-sm font-bold text-slate-700 hover:bg-slate-100 transition"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <UserPlus size={18} className="text-slate-400"/>
+                                                    נכס בבעלות משותפת (ספציפי)
+                                                </span>
+                                                {isSpecificSharingOpen ? <ChevronUp size={18} className="text-slate-400"/> : <ChevronDown size={18} className="text-slate-400"/>}
+                                            </button>
+                                            
+                                            {isSpecificSharingOpen && (
+                                                <div className="p-4 pt-0 animate-fade-in border-t border-slate-100">
+                                                    <p className="text-xs text-slate-400 mb-3 mt-3">סמנו את השותפים הנוספים לנכס זה:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {profiles.filter(p => p.id !== editOwner).map(p => {
+                                                            const isSelected = editSharedWith.includes(p.id);
+                                                            return (
+                                                                <div 
+                                                                    key={p.id}
+                                                                    onClick={() => toggleSharedProfile(p.id)}
+                                                                    className={`px-3 py-2 rounded-xl text-sm font-bold cursor-pointer transition flex items-center gap-2 border ${isSelected ? 'bg-white border-emerald-500 text-emerald-700 shadow-sm' : 'bg-slate-100 border-transparent text-slate-400 hover:bg-slate-200'}`}
+                                                                >
+                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-slate-300'}`}>
+                                                                        {isSelected && <Check size={10} strokeWidth={4} />}
+                                                                    </div>
+                                                                    {p.name}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {profiles.filter(p => p.id !== editOwner).length === 0 && (
+                                                            <span className="text-xs text-slate-400 italic">אין משתמשים נוספים לשיתוף</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

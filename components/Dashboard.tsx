@@ -21,9 +21,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   const getProfile = (id?: string) => profiles.find(p => p.id === id);
 
   // --- Calculations ---
-  // Data passed here is already filtered by App.tsx, so we can just sum it up.
-  // HOWEVER, for the "Owner Badge" logic, we need to know who owns what.
-  
+  // Data passed here is already filtered by App.tsx
   const checkingTotal = data.accounts.filter(a => a.type !== 'emergency').reduce((sum, item) => sum + item.value, 0);
   const emergencyTotal = data.accounts.filter(a => a.type === 'emergency').reduce((sum, item) => sum + item.value, 0);
   
@@ -130,13 +128,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
       {/* Header Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <div className="flex items-center gap-3 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם הפרופיל">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">שלום, {userName || 'אורח'}</h2>
-                <div className="bg-slate-100 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200 text-slate-500">
-                    <Edit2 size={16} />
+            <div className="flex items-center gap-2 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם">
+                <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    שלום, {userName || 'אורח'}
+                </h2>
+                <div className="bg-slate-100 p-1.5 rounded-full text-slate-400 opacity-50 group-hover:opacity-100 transition-all hover:bg-emerald-50 hover:text-emerald-600">
+                    <Edit2 size={16}/>
                 </div>
             </div>
-            <p className="text-slate-500">הנה תמונת המצב הפיננסית שלך להיום</p>
+            <p className="text-slate-500 mt-1">הנה תמונת המצב הפיננסית שלך להיום</p>
           </div>
           <div className="flex flex-wrap gap-3 items-center">
              <button onClick={() => onNavigate('future_projection')} className="flex items-center gap-2 bg-emerald-600 text-white border border-emerald-600 px-5 py-2.5 rounded-full hover:bg-emerald-700 transition text-sm font-bold shadow-md shadow-emerald-200">

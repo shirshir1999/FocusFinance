@@ -13,7 +13,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
   const faqs = [
     {
       question: "האם המידע שלי מאובטח?",
-      answer: "כן, המערכת מחוברת למסד נתונים מאובטח בענן (Supabase). המידע נשמר תחת הצפנה ופרוטוקולי אבטחה מחמירים. הגישה לנתונים מתאפשרת רק באמצעות ההזדהות האישית שלכם."
+      answer: "בהחלט. המערכת משתמשת בסטנדרטים המחמירים ביותר של אבטחת מידע והצפנה (SSL/TLS) לשמירה על הנתונים שלכם בשרתים המאובטחים. הגישה לנתונים מתאפשרת אך ורק באמצעות האימות האישי שלכם."
     },
     {
       question: "האם המידע משותף עם גורמים אחרים?",
@@ -123,7 +123,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                     <div className="mt-8 p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
                         <ShieldCheck size={32} className="mx-auto text-emerald-500 mb-2" />
                         <h4 className="font-bold text-emerald-800">פרטיות מובטחת</h4>
-                        <p className="text-xs text-emerald-600 mt-1">המידע נשמר מוצפן בשרתים מאובטחים.</p>
+                        <p className="text-xs text-emerald-600 mt-1">המידע נשמר מוצפן ופרטי לחלוטין.</p>
                     </div>
                 </div>
             )}

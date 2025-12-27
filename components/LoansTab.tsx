@@ -28,7 +28,7 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
   const [interest, setInterest] = useState('');
   
   // New Calculator Fields
-  const [loanType, setLoanType] = useState<'spitzer' | 'balloon_full' | 'balloon_partial'>('spitzer');
+  const [loanType, setLoanType] = useState<'spitzer' | 'balloon'>('spitzer');
   const [durationMonths, setDurationMonths] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [totalInterest, setTotalInterest] = useState(0);
@@ -53,16 +53,12 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                   pmt = principal * ( (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) );
               }
               totInt = (pmt * n) - principal;
-          } else if (loanType === 'balloon_partial') {
-              // Interest Only monthly
-              pmt = (principal * r) / 12;
-              totInt = (pmt * n);
           } else {
-              // Full Balloon - No monthly payment, full interest at end (Compound)
-              pmt = 0;
-              // FV = PV * (1 + r/12)^n
-              const futureValue = principal * Math.pow(1 + r/12, n);
-              totInt = futureValue - principal;
+              // Balloon (Interest Only usually, or Full Balloon at end)
+              // Assuming Interest Only for monthly payment context
+              // PMT = P * r / 12
+              pmt = (principal * r) / 12;
+              totInt = (pmt * n); // Simple interest accumulation
           }
           
           setMonthlyPayment(pmt.toFixed(0));
@@ -199,9 +195,7 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                                <div className="flex items-center justify-center gap-4 text-xs text-slate-500 bg-slate-50 p-2 rounded-xl mt-2">
                                    <span className="font-medium">ריבית: {item.interestRate}%</span>
                                    <span className="w-px h-3 bg-slate-300"></span>
-                                   <span className="font-medium">
-                                       {item.loanType === 'spitzer' ? 'שפיצר' : item.loanType === 'balloon_full' ? 'בלון מלא' : 'בלון חלקי'}
-                                   </span>
+                                   <span className="font-medium">{item.loanType === 'spitzer' ? 'שפיצר' : 'בלון'}</span>
                                </div>
                            </div>
                        </div>
@@ -285,8 +279,7 @@ const LoansTab: React.FC<LoansTabProps> = ({ items, onAdd, onRemove, onUpdate, o
                                 className="w-full p-3 bg-white border border-rose-200 rounded-2xl text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none transition appearance-none shadow-sm"
                             >
                                 <option value="spitzer">שפיצר (החזר קבוע)</option>
-                                <option value="balloon_partial">בלון חלקי (ריבית בלבד)</option>
-                                <option value="balloon_full">בלון מלא (ללא תשלום חודשי)</option>
+                                <option value="balloon">בלון (ריבית בלבד)</option>
                             </select>
                         </div>
 

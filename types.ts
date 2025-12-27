@@ -25,7 +25,8 @@ export interface BaseItem {
   
   // Multi-User Support
   ownerId?: string; // ID of the profile who owns this
-  isShared?: boolean; // If true, appears for everyone
+  isShared?: boolean; // If true, appears for everyone (Global)
+  sharedWithIds?: string[]; // Specific profiles who can see this (Granular)
 }
 
 export interface AccountItem extends BaseItem {
@@ -91,8 +92,8 @@ export interface RealEstateItem extends BaseItem {
 export interface LoanItem extends BaseItem {
     source: string; // Bank name / Entity
     purpose: string; // Car, Renovation, etc.
-    loanType: 'spitzer' | 'balloon_full' | 'balloon_partial'; // Updated types
-    durationMonths: number;
+    loanType: 'spitzer' | 'balloon'; // New
+    durationMonths: number; // New
     originalAmount: number;
     monthlyPayment: number;
     interestRate: number;
