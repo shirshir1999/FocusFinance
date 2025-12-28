@@ -191,15 +191,28 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-        // Initial load: Load logged-in user's data
-        loadPortfolioData(currentUser.id);
-        
-        // Check for shared portfolios
-        fetchSharedPortfolios(currentUser.email).then(shared => {
-            // Filter out own portfolio if it appears
-            const others = shared.filter((s: any) => s.id !== currentUser.id);
-            setSharedPortfolios(others);
-        });
+        // --- KEY FIX: Check for shared portfolios (Client Access) FIRST ---
+        const initUser = async () => {
+            setLoading(true);
+            try {
+                const shared = await fetchSharedPortfolios(currentUser.email);
+                // Filter out own portfolio if it appears (unlikely but safe)
+                const others = shared.filter((s: any) => s.id !== currentUser.id);
+                setSharedPortfolios(others);
+
+                if (others.length > 0) {
+                    // USER IS A CLIENT: Load the first shared portfolio found
+                    await loadPortfolioData(others[0].id);
+                } else {
+                    // USER IS REGULAR/ADVISOR: Load their own data
+                    await loadPortfolioData(currentUser.id);
+                }
+            } catch (e) {
+                console.error("Error init user", e);
+                setLoading(false);
+            }
+        };
+        initUser();
     }
   }, [currentUser]);
 
@@ -431,7 +444,7 @@ const App: React.FC = () => {
           const p = data.profiles?.find(p => p.id === activeProfileId);
           if (p) return p.name;
       }
-      // 2. Try to get Main User name
+      // 2. Try to get Main User name from the loaded data (Client name)
       const main = data.profiles?.find(p => p.isMainUser);
       if (main) return main.name;
       
