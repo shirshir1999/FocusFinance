@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FinancialGoal, BaseItem } from '../types';
-import { Plus, Target, ArrowRight, X, Save, Edit2, Trash2, Link2, Calculator, Check, TrendingUp, Calendar, Coins, ArrowUpRight, Info, AlertCircle } from 'lucide-react';
+import { Plus, Target, ArrowRight, X, Save, Edit2, Trash2, Link2, Calculator, Check, TrendingUp, Calendar, Coins, ArrowUpRight, Info, AlertCircle, Clock, Pin, PinOff } from 'lucide-react';
 import NumberInput from './NumberInput';
 
 interface GoalsTabProps {
@@ -23,6 +23,7 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
+  const [targetDate, setTargetDate] = useState(''); // New State
   const [linkedAssetId, setLinkedAssetId] = useState('');
   const [isLinked, setIsLinked] = useState(false);
   
@@ -40,6 +41,7 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
           if (item) {
               setName(item.name);
               setTargetAmount(item.targetAmount.toString());
+              setTargetDate(item.targetDate || '');
               
               // Calculate dynamic value if linked, else stored value
               let val = item.value;
@@ -59,6 +61,7 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
             setName('');
             setTargetAmount('');
             setCurrentAmount('');
+            setTargetDate('');
             setIsLinked(false);
             setLinkedAssetId('');
             setSimResult(null);
@@ -81,17 +84,37 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
       calculateSimulation();
   }, [simMode, simRate, simMonths, simPayment, targetAmount, currentAmount]);
 
+  // Auto-Update Simulator Months when Target Date Changes
+  useEffect(() => {
+      if (targetDate) {
+          const start = new Date();
+          const end = new Date(targetDate);
+          // Calculate difference in months
+          const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+          const safeMonths = Math.max(1, diffMonths);
+          
+          setSimMonths(safeMonths.toString());
+          
+          // Switch to Payment Calc mode automatically if date is picked (logic: I have a date, tell me how much to pay)
+          setSimMode('calc_payment');
+      }
+  }, [targetDate]);
+
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!name || !targetAmount) return;
+
+      const existingItem = editingId ? items.find(i => i.id === editingId) : null;
 
       const newItem: FinancialGoal = {
           id: editingId || Date.now().toString(),
           name,
           targetAmount: Number(targetAmount),
           value: Number(currentAmount),
+          targetDate: targetDate || undefined,
           isLinked,
           linkedAssetId: isLinked ? linkedAssetId : undefined,
+          isPinned: existingItem ? existingItem.isPinned : false, // Preserve pin state on edit, default false on new
           history: [], 
       };
 
@@ -103,6 +126,10 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
       
       setIsAddOpen(false);
       setEditingId(null);
+  };
+
+  const togglePin = (goal: FinancialGoal) => {
+      onUpdate(goal.id, { ...goal, isPinned: !goal.isPinned });
   };
 
   const calculateSimulation = () => {
@@ -217,9 +244,31 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
                     const displayPercent = Math.min(100, percent);
                     const isCompleted = percent >= 100;
 
+                    let timeLeftString = '';
+                    if (goal.targetDate && !isCompleted) {
+                        const today = new Date();
+                        const target = new Date(goal.targetDate);
+                        const diffTime = target.getTime() - today.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays < 0) timeLeftString = 'עבר תאריך היעד';
+                        else if (diffDays < 30) timeLeftString = `נותרו ${diffDays} ימים`;
+                        else {
+                            const months = Math.floor(diffDays / 30);
+                            timeLeftString = `נותרו כ-${months} חודשים`;
+                        }
+                    }
+
                     return (
                         <div key={goal.id} className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col justify-between">
-                            <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded-xl backdrop-blur-sm shadow-sm">
+                                <button 
+                                    onClick={() => togglePin(goal)} 
+                                    className={`p-2 rounded-full transition ${goal.isPinned ? 'bg-orange-50 text-orange-500' : 'bg-slate-100 text-slate-400 hover:text-orange-400'}`}
+                                    title={goal.isPinned ? "הסר מהדאשבורד" : "הצג בדאשבורד"}
+                                >
+                                    {goal.isPinned ? <Pin size={16} fill="currentColor" /> : <Pin size={16}/>}
+                                </button>
                                 <button onClick={() => setEditingId(goal.id)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"><Edit2 size={16}/></button>
                                 <button onClick={() => onRemove(goal.id)} className="p-2 bg-red-50 hover:bg-red-100 rounded-full text-red-500"><Trash2 size={16}/></button>
                             </div>
@@ -230,7 +279,10 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
                                         {isCompleted ? <Check size={24} /> : <Target size={24} />}
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800 text-lg leading-tight">{goal.name}</h3>
+                                        <h3 className="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
+                                            {goal.name}
+                                            {goal.isPinned && <Pin size={12} className="text-orange-400" fill="currentColor"/>}
+                                        </h3>
                                         {goal.isLinked && <span className="text-[10px] text-slate-400 flex items-center gap-1"><Link2 size={10}/> מקושר לנכס</span>}
                                     </div>
                                 </div>
@@ -246,7 +298,14 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
                                         style={{ width: `${displayPercent}%` }}
                                     ></div>
                                 </div>
-                                <div className={`text-right text-xs font-bold ${isCompleted ? 'text-emerald-600' : 'text-slate-500'}`}>{percent.toFixed(1)}% הושלמו</div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className={`font-bold ${isCompleted ? 'text-emerald-600' : 'text-slate-500'}`}>{percent.toFixed(1)}% הושלמו</span>
+                                    {timeLeftString && (
+                                        <span className="text-slate-400 flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-full">
+                                            <Clock size={10}/> {timeLeftString}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     );
@@ -293,15 +352,28 @@ const GoalsTab: React.FC<GoalsTabProps> = ({ items, availableAssets, onAdd, onRe
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700">סכום נוכחי</label>
-                                        <NumberInput
-                                            value={currentAmount}
-                                            onChange={(val) => setCurrentAmount(val)}
-                                            disabled={isLinked} // Read only if linked
-                                            className={`w-full p-4 border rounded-2xl outline-none font-black text-xl shadow-sm ${isLinked ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-2 focus:ring-teal-500'}`}
-                                            placeholder="0"
-                                        />
+                                        <label className="text-sm font-bold text-slate-700">תאריך יעד (אופציונלי)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="date"
+                                                value={targetDate}
+                                                onChange={(e) => setTargetDate(e.target.value)}
+                                                className="w-full p-4 pl-10 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 focus:ring-2 focus:ring-teal-500 outline-none text-lg shadow-sm"
+                                            />
+                                            <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700">סכום נוכחי (התחלתי)</label>
+                                    <NumberInput
+                                        value={currentAmount}
+                                        onChange={(val) => setCurrentAmount(val)}
+                                        disabled={isLinked} // Read only if linked
+                                        className={`w-full p-4 border rounded-2xl outline-none font-black text-xl shadow-sm ${isLinked ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-2 focus:ring-teal-500'}`}
+                                        placeholder="0"
+                                    />
                                 </div>
 
                                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">

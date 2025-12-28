@@ -108,6 +108,7 @@ export interface FinancialGoal extends BaseItem {
     isLinked: boolean;
     monthlyContribution?: number; // Planned contribution
     assumedRate?: number; // For projection
+    isPinned?: boolean; // Determines if shown on dashboard
 }
 
 export interface IncomeItem {

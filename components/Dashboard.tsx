@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FinancialState, TabId, UserProfile, IncomeItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, Table, Users, Edit2, Target, Move, X, Save, Plus } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, Table, Users, Edit2, Target, Move, X, Save, Plus, Clock, Pin } from 'lucide-react';
 
 interface DashboardProps {
   data: FinancialState;
@@ -146,24 +146,13 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   const totalExpensesWithDebt = totalExpenses + totalDebtService;
   const monthlyNet = totalIncome - totalExpensesWithDebt;
 
-  // Goals Calculation
+  // Goals Calculation Logic
   const activeGoals = data.goals || [];
-  const goalsCount = activeGoals.length;
-  // Calculate total progress. If linked, find the asset value.
-  const goalsProgress = activeGoals.reduce((acc, goal) => {
-      let current = goal.value; // Default to manual value
-      if (goal.isLinked && goal.linkedAssetId) {
-          const allAssets = [...data.accounts, ...data.pensions, ...data.investments];
-          const asset = allAssets.find(a => a.id === goal.linkedAssetId);
-          if (asset) current = asset.value;
-      }
-      return {
-          target: acc.target + goal.targetAmount,
-          current: acc.current + current
-      };
-  }, { target: 0, current: 0 });
   
-  const goalsPercent = goalsProgress.target > 0 ? (goalsProgress.current / goalsProgress.target) * 100 : 0;
+  // Sort Logic: Pinned First, then rest.
+  const topGoals = [...activeGoals]
+        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
+        .slice(0, 2); // Limit to 2 goals
 
   const historyData = useMemo(() => {
     const allItems = [...data.accounts, ...data.pensions, ...data.investments, ...data.realEstate, ...data.loans];
@@ -235,22 +224,74 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
           case 'goals': return (
             <div className={wrapperClass}>
                 {editOverlay}
-                <DashboardCard 
-                    title='מטרות' 
-                    subtitle={`${goalsCount} יעדים פעילים`}
-                    value={goalsProgress.current}
-                    icon={<Target size={24} className="text-teal-500" />}
-                    colorClass="border-teal-100"
+                <button 
                     onClick={() => !isEditing && onNavigate('goals')}
-                    footer={
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-teal-500 rounded-full transition-all duration-1000" style={{ width: `${goalsPercent}%` }}></div>
-                            </div>
-                            <span className="text-xs font-bold text-teal-600">{goalsPercent.toFixed(0)}%</span>
+                    className="bg-white rounded-2xl p-6 border border-teal-100 shadow-sm transition-all duration-300 flex flex-col group relative hover:shadow-md hover:-translate-y-1 h-full w-full text-right"
+                >
+                    <div className="w-full flex justify-between items-start mb-4">
+                        <div className="flex gap-4 items-center">
+                            <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all"><Target size={24} className="text-teal-500"/></div>
+                            <h3 className="font-bold text-slate-700 text-lg group-hover:text-slate-900">מטרות</h3>
                         </div>
-                    }
-                />
+                        <ChevronRight className="text-slate-300 group-hover:text-slate-400" size={20} />
+                    </div>
+
+                    <div className="w-full flex-1 space-y-4">
+                        {topGoals.length === 0 ? (
+                            <div className="text-xs text-slate-400 p-2 text-center h-full flex items-center justify-center">לא הוגדרו מטרות</div>
+                        ) : (
+                            topGoals.map(goal => {
+                                let currentVal = goal.value;
+                                if (goal.isLinked && goal.linkedAssetId) {
+                                    const allAssets = [...data.accounts, ...data.pensions, ...data.investments];
+                                    const asset = allAssets.find(a => a.id === goal.linkedAssetId);
+                                    if (asset) currentVal = asset.value;
+                                }
+                                const percent = goal.targetAmount > 0 ? (currentVal / goal.targetAmount) * 100 : 0;
+                                const displayPercent = Math.min(100, percent);
+                                
+                                let timeLeftString = '';
+                                if (goal.targetDate && percent < 100) {
+                                    const today = new Date();
+                                    const target = new Date(goal.targetDate);
+                                    const diffTime = target.getTime() - today.getTime();
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays < 0) timeLeftString = 'עבר הזמן';
+                                    else if (diffDays < 30) timeLeftString = `${diffDays} ימים`;
+                                    else {
+                                        const months = Math.floor(diffDays / 30);
+                                        timeLeftString = `עוד ${months} חודשים`;
+                                    }
+                                }
+
+                                return (
+                                    <div key={goal.id} className="w-full">
+                                        <div className="flex justify-between items-end mb-1">
+                                            <span className="text-sm font-bold text-slate-700 truncate max-w-[120px] flex items-center gap-1" title={goal.name}>
+                                                {goal.name}
+                                                {goal.isPinned && <Pin size={10} className="text-orange-400 fill-orange-400" />}
+                                            </span>
+                                            <div className="text-xs">
+                                                <span className="font-black text-slate-800">{new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', notation: 'compact', maximumFractionDigits: 1 }).format(currentVal)}</span>
+                                                <span className="text-slate-400 mx-1">/</span>
+                                                <span className="text-slate-500">{new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', notation: 'compact', maximumFractionDigits: 1 }).format(goal.targetAmount)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+                                            <div className={`h-full rounded-full transition-all duration-1000 ${percent >= 100 ? 'bg-emerald-500' : 'bg-teal-500'}`} style={{ width: `${displayPercent}%` }}></div>
+                                        </div>
+                                        <div className="flex justify-between text-[10px]">
+                                            <span className="text-teal-600 font-bold">{percent.toFixed(0)}%</span>
+                                            {timeLeftString && <span className="text-slate-400 flex items-center gap-1"><Clock size={10}/> {timeLeftString}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                        {activeGoals.length > 2 && <div className="text-xs text-slate-400 text-center mt-2">+ עוד {activeGoals.length - 2} מטרות</div>}
+                    </div>
+                </button>
             </div>
           );
           case 'cashflow': return (
