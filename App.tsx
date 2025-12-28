@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import BusinessDashboard from './components/BusinessDashboard'; 
@@ -266,6 +267,7 @@ const App: React.FC = () => {
       // 2. Initialize Client's Data in DB
       const newClientData: FinancialState = {
           ...initialData,
+          goals: [], // Ensure goals are empty for new client
           authorizedEmails: email ? [email, currentUser.email] : [currentUser.email],
           profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
       };
@@ -424,8 +426,19 @@ const App: React.FC = () => {
   };
 
   const getMainUserName = () => {
-      if (activeProfileId !== 'all') return data.profiles?.find(p => p.id === activeProfileId)?.name;
-      return data.profiles?.find(p => p.isMainUser)?.name || 'משתמש';
+      // 1. Try to get name of active profile
+      if (activeProfileId !== 'all') {
+          const p = data.profiles?.find(p => p.id === activeProfileId);
+          if (p) return p.name;
+      }
+      // 2. Try to get Main User name
+      const main = data.profiles?.find(p => p.isMainUser);
+      if (main) return main.name;
+      
+      // 3. Fallback to first profile if exists
+      if (data.profiles && data.profiles.length > 0) return data.profiles[0].name;
+      
+      return 'משתמש';
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900"><Loader2 className="animate-spin text-emerald-500 w-12 h-12" /></div>;
@@ -465,7 +478,8 @@ const App: React.FC = () => {
                     pensions: getFilteredItems(data.pensions),
                     investments: getFilteredItems(data.investments),
                     realEstate: getFilteredItems(data.realEstate),
-                    loans: getFilteredItems(data.loans)
+                    loans: getFilteredItems(data.loans),
+                    goals: getFilteredItems(data.goals) // Added filtering for goals
                 }} 
                 onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }}
                 userName={getMainUserName()} 
@@ -504,7 +518,8 @@ const App: React.FC = () => {
                 pensions: getFilteredItems(data.pensions),
                 investments: getFilteredItems(data.investments),
                 realEstate: getFilteredItems(data.realEstate),
-                loans: getFilteredItems(data.loans)
+                loans: getFilteredItems(data.loans),
+                goals: getFilteredItems(data.goals) // Added filtering for goals
             }} 
             onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }}
             userName={getMainUserName()} 
