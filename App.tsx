@@ -7,6 +7,7 @@ import InvestmentsTab from './components/InvestmentsTab';
 import RealEstateTab from './components/RealEstateTab';
 import LoansTab from './components/LoansTab';
 import CashFlowTab from './components/CashFlowTab';
+import GoalsTab from './components/GoalsTab'; // New Import
 import PensionCalculator from './components/PensionCalculator';
 import FutureProjection from './components/FutureProjection';
 import FeeCalculator from './components/FeeCalculator';
@@ -15,11 +16,17 @@ import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
 import TermsModal from './components/TermsModal';
-import TourOverlay from './components/TourOverlay';
-import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile, PensionItem } from './types';
+import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile } from './types';
 import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
 import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys } from './services/supabase';
+
+// Define default layout order
+const DEFAULT_DASHBOARD_LAYOUT = [
+    'goals', 'cashflow', 'accounts',
+    'emergency', 'pension', 'study_fund',
+    'investments', 'realestate', 'loans'
+];
 
 const initialData: FinancialState = {
   hasAcceptedTerms: false,
@@ -28,6 +35,7 @@ const initialData: FinancialState = {
   investments: [],
   realEstate: [],
   loans: [],
+  goals: [], // Initialize Goals
   cashFlow: {
       monthlyIncome: 0,
       additionalIncomes: [],
@@ -36,7 +44,9 @@ const initialData: FinancialState = {
       expensesMode: 'simple',
       generalExpense: 0,
       detailedExpenses: {}
-  }
+  },
+  dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
+  hiddenWidgets: []
 };
 
 const DEFAULT_PROFILE_COLOR = '#3b82f6';
@@ -70,10 +80,6 @@ const App: React.FC = () => {
   
   // Terms Modal State
   const [showTerms, setShowTerms] = useState(false);
-
-  // Tour State
-  const [isTourOpen, setIsTourOpen] = useState(false);
-  const [tourStep, setTourStep] = useState<string>('');
 
   // Scroll to top when view changes
   useEffect(() => {
@@ -120,7 +126,15 @@ const App: React.FC = () => {
                      cloudData.investments = assignOwner(cloudData.investments || []);
                      cloudData.realEstate = assignOwner(cloudData.realEstate || []);
                      cloudData.loans = assignOwner(cloudData.loans || []);
+                     cloudData.goals = assignOwner(cloudData.goals || []);
                 }
+                // Ensure goals array exists for migration
+                if (!cloudData.goals) cloudData.goals = [];
+                
+                // Initialize new layout fields if missing
+                if (!cloudData.dashboardLayout) cloudData.dashboardLayout = DEFAULT_DASHBOARD_LAYOUT;
+                if (!cloudData.hiddenWidgets) cloudData.hiddenWidgets = [];
+
                 setData(cloudData);
                 if (!cloudData.hasAcceptedTerms) {
                     setShowTerms(true);
@@ -210,49 +224,13 @@ const App: React.FC = () => {
       setData(prev => ({ ...prev, cashFlow: cashFlowState }));
   };
 
+  const handleUpdateDashboardLayout = (newLayout: string[], hidden: string[]) => {
+      setData(prev => ({ ...prev, dashboardLayout: newLayout, hiddenWidgets: hidden }));
+  };
+
   const navigateTo = (view: TabId, params?: any) => {
       setActiveView(view);
       setViewParams(params || null);
-  };
-
-  // --- Tour & Demo Data Logic ---
-  const handleTourStepChange = (stepId: string) => {
-      setTourStep(stepId);
-      
-      // Inject Demo Pension when step reaches 'pension-item-show' (Simulate "Save" click)
-      if (stepId === 'pension-item-show') {
-          // Check if demo item already exists to prevent dupes
-          if (!data.pensions.find(p => p.id === 'demo-pension')) {
-              const demoPension: PensionItem = {
-                  id: 'demo-pension',
-                  name: 'מנורה מבטחים',
-                  value: 185000,
-                  type: 'pension',
-                  monthlyDeposit: 1500,
-                  managementFeeAccumulation: 0.2,
-                  managementFeeDeposit: 1.5,
-                  track: 'מניות חו״ל',
-                  history: [],
-                  ownerId: activeProfileId === 'all' ? (data.profiles?.[0]?.id || 'main') : activeProfileId
-              };
-              updateData('pensions', [...data.pensions, demoPension]);
-          }
-      }
-
-      // Cleanup on finish
-      if (stepId === 'finish' || stepId === 'intro') {
-          // Remove demo item
-          if (data.pensions.find(p => p.id === 'demo-pension')) {
-              updateData('pensions', data.pensions.filter(p => p.id !== 'demo-pension'));
-          }
-      }
-  };
-
-  const handleTourClose = () => {
-      setIsTourOpen(false);
-      // Cleanup demo item on close
-      updateData('pensions', data.pensions.filter(p => p.id !== 'demo-pension'));
-      setTourStep('');
   };
 
   // Profile functions...
@@ -298,6 +276,7 @@ const App: React.FC = () => {
       newData.investments = updateAssets(newData.investments);
       newData.realEstate = updateAssets(newData.realEstate);
       newData.loans = updateAssets(newData.loans);
+      newData.goals = updateAssets(newData.goals);
       setData(newData);
       if (activeProfileId === profileId) setActiveProfileId(newData.profiles[0]?.id || 'all');
       setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' });
@@ -315,7 +294,22 @@ const App: React.FC = () => {
     const commonModalProps = { profiles: data.profiles || [], activeProfileId: activeProfileId };
     const renderWithModal = (ModalComponent: React.FC<any>, props: any = {}) => (
         <>
-            <Dashboard data={{...data, accounts: getFilteredItems(data.accounts), pensions: getFilteredItems(data.pensions), investments: getFilteredItems(data.investments), realEstate: getFilteredItems(data.realEstate), loans: getFilteredItems(data.loans)}} onNavigate={navigateTo} userName={getMainUserName()} onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} activeProfileId={activeProfileId} profiles={data.profiles || []} />
+            <Dashboard 
+                data={{
+                    ...data,
+                    accounts: getFilteredItems(data.accounts),
+                    pensions: getFilteredItems(data.pensions),
+                    investments: getFilteredItems(data.investments),
+                    realEstate: getFilteredItems(data.realEstate),
+                    loans: getFilteredItems(data.loans)
+                }} 
+                onNavigate={navigateTo} 
+                userName={getMainUserName()} 
+                onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} 
+                activeProfileId={activeProfileId} 
+                profiles={data.profiles || []}
+                onUpdateLayout={handleUpdateDashboardLayout}
+            />
             <ModalComponent {...props} {...commonModalProps} onClose={() => navigateTo('dashboard')} />
         </>
     );
@@ -334,12 +328,46 @@ const App: React.FC = () => {
 
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard data={{...data, accounts: getFilteredItems(data.accounts), pensions: getFilteredItems(data.pensions), investments: getFilteredItems(data.investments), realEstate: getFilteredItems(data.realEstate), loans: getFilteredItems(data.loans)}} onNavigate={navigateTo} userName={getMainUserName()} onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} activeProfileId={activeProfileId} profiles={data.profiles || []} />;
+        return <Dashboard 
+            data={{
+                ...data,
+                accounts: getFilteredItems(data.accounts),
+                pensions: getFilteredItems(data.pensions),
+                investments: getFilteredItems(data.investments),
+                realEstate: getFilteredItems(data.realEstate),
+                loans: getFilteredItems(data.loans)
+            }} 
+            onNavigate={navigateTo} 
+            userName={getMainUserName()} 
+            onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} 
+            activeProfileId={activeProfileId} 
+            profiles={data.profiles || []}
+            onUpdateLayout={handleUpdateDashboardLayout}
+        />;
       case 'accounts': return <AccountsTab items={getFilteredItems(data.accounts)} onAdd={(item) => updateData('accounts', [...data.accounts, assignOwner(item)])} onRemove={(id) => updateData('accounts', data.accounts.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('accounts', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('accounts', id, item)} {...tabProps} />;
-      case 'pension': return <PensionTab items={getFilteredItems(data.pensions)} initialType={viewParams?.type} onAdd={(item) => updateData('pensions', [...data.pensions, assignOwner(item)])} onRemove={(id) => updateData('pensions', data.pensions.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('pensions', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('pensions', id, item)} tourStep={tourStep} {...tabProps} />;
+      case 'pension': return <PensionTab items={getFilteredItems(data.pensions)} initialType={viewParams?.type} onAdd={(item) => updateData('pensions', [...data.pensions, assignOwner(item)])} onRemove={(id) => updateData('pensions', data.pensions.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('pensions', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('pensions', id, item)} {...tabProps} />;
       case 'investments': return <InvestmentsTab items={getFilteredItems(data.investments)} onAdd={(item) => updateData('investments', [...data.investments, assignOwner(item)])} onRemove={(id) => updateData('investments', data.investments.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('investments', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('investments', id, item)} {...tabProps} />;
       case 'realestate': return <RealEstateTab items={getFilteredItems(data.realEstate)} onAdd={(item) => updateData('realEstate', [...data.realEstate, assignOwner(item)])} onRemove={(id) => updateData('realEstate', data.realEstate.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('realEstate', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('realEstate', id, item)} {...tabProps} />;
       case 'loans': return <LoansTab items={getFilteredItems(data.loans)} onAdd={(item) => updateData('loans', [...data.loans, assignOwner(item)])} onRemove={(id) => updateData('loans', data.loans.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('loans', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('loans', id, item)} {...tabProps} />;
+      case 'goals': 
+        // Pass all assets to GoalsTab for linking functionality
+        const allAssets = [
+            ...(data.accounts ? getFilteredItems(data.accounts) : []),
+            ...(data.pensions ? getFilteredItems(data.pensions) : []),
+            ...(data.investments ? getFilteredItems(data.investments) : []),
+            ...(data.realEstate ? getFilteredItems(data.realEstate) : [])
+        ];
+        return <GoalsTab 
+            items={getFilteredItems(data.goals)} 
+            availableAssets={allAssets}
+            onAdd={(item) => updateData('goals', [...data.goals, assignOwner(item)])} 
+            onRemove={(id) => updateData('goals', data.goals.filter(i => i.id !== id))} 
+            onUpdate={(id, item) => {
+                 const updated = data.goals.map(g => g.id === id ? item : g);
+                 updateData('goals', updated);
+            }} 
+            {...tabProps} 
+        />;
       case 'cashflow': return <CashFlowTab data={data.cashFlow || initialData.cashFlow!} loans={getFilteredItems(data.loans)} realEstate={getFilteredItems(data.realEstate)} onUpdate={handleUpdateCashFlow} onBack={() => navigateTo('dashboard')} />;
       default: return <Dashboard data={data} onNavigate={navigateTo} userName={getMainUserName()} onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} activeProfileId={activeProfileId} profiles={data.profiles || []} />;
     }
@@ -394,18 +422,8 @@ const App: React.FC = () => {
       {isEditNameOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="הכנס שם מלא" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsEditNameOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleEditName} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold">שמור</button></div></div></div>)}
       {isAddProfileOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddProfileOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-600"><Users size={24} /></div><h3 className="text-lg font-bold text-slate-800 mb-2">הוספת פרופיל חדש</h3><p className="text-sm text-slate-500 mb-4">הוסיפו פרופיל עבור בן/בת זוג או ילד לניהול נפרד או משותף.</p><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="שם הפרופיל (לדוגמה: בן)" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsAddProfileOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleAddProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">הוסף פרופיל</button></div></div></div>)}
       {deleteProfileState.isOpen && (<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}><div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}><div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500"><Trash2 size={32} /></div><h3 className="font-black text-2xl text-slate-800 mb-2 text-center">מחיקת פרופיל</h3>{deleteProfileState.step === 'confirm' ? (<><p className="text-slate-500 mb-8 leading-relaxed text-center">אתם עומדים למחוק את הפרופיל. מה תרצו לעשות עם הנכסים המשויכים אליו?</p><div className="space-y-3">{(data.profiles && data.profiles.length > 1) && (<button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'action' }))} className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between group transition"><span className="font-bold text-slate-700">העברת נכסים למשתמש אחר</span><ArrowRight size={20} className="text-slate-400 group-hover:text-slate-600"/></button>)}<button onClick={() => executeDeleteProfile('delete_assets')} className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 rounded-xl font-bold transition flex items-center justify-center gap-2"><Trash2 size={18}/>מחיקת הפרופיל והנכסים שלו</button><button onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })} className="w-full p-3 text-slate-400 hover:text-slate-600 text-sm font-medium mt-2">ביטול</button></div></>) : (<><p className="text-slate-500 mb-6 leading-relaxed text-center">לאיזה משתמש תרצו להעביר את הנכסים?</p><div className="space-y-2 mb-6 max-h-48 overflow-y-auto custom-scrollbar">{data.profiles?.filter(p => p.id !== deleteProfileState.profileId).map(p => (<button key={p.id} onClick={() => setDeleteProfileState(prev => ({ ...prev, targetProfileId: p.id }))} className={`w-full p-3 rounded-xl flex items-center gap-3 border transition ${deleteProfileState.targetProfileId === p.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:bg-slate-50'}`}><div className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0" style={{ backgroundColor: p.color }}>{p.name[0]}</div><span className="font-bold text-slate-700">{p.name}</span></button>))}</div><div className="flex gap-3"><button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'confirm', targetProfileId: undefined }))} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">חזרה</button><button onClick={() => executeDeleteProfile('transfer_assets')} disabled={!deleteProfileState.targetProfileId} className="flex-1 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed">אשר העברה ומחיקה</button></div></>)}</div></div>)}
-      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} onStartTour={() => { setIsHelpOpen(false); setIsTourOpen(true); }} />}
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} onStartTour={() => { setIsHelpOpen(false); /* Start Tour logic if implemented */ }} />}
       
-      <TourOverlay 
-        isOpen={isTourOpen} 
-        onClose={handleTourClose}
-        onStepChange={handleTourStepChange}
-        onNavigate={(view) => {
-            if (activeView !== view) {
-                navigateTo(view);
-            }
-        }}
-      />
     </div>
   );
 };

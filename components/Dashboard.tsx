@@ -1,8 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FinancialState, TabId, UserProfile, IncomeItem } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, Table, Users, Edit2 } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Landmark, User, BookOpen, ChevronRight, ArrowRightLeft, Building2, Calculator, CreditCard, Table, Users, Edit2, Target, Move, X, Save, Plus } from 'lucide-react';
 
 interface DashboardProps {
   data: FinancialState;
@@ -11,12 +11,91 @@ interface DashboardProps {
   onEditName: () => void;
   activeProfileId: string;
   profiles: UserProfile[];
+  onUpdateLayout?: (layout: string[], hidden: string[]) => void;
 }
 
 const COLORS = ['#10B981', '#3B82F6', '#06B6D4', '#F59E0B', '#8B5CF6', '#6366F1'];
 
-const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles }) => {
+// Widget Definitions for mapping
+const WIDGETS: Record<string, { title: string, icon: any }> = {
+    'goals': { title: 'מטרות', icon: Target },
+    'cashflow': { title: 'תזרים', icon: ArrowRightLeft },
+    'accounts': { title: 'עו"ש', icon: Landmark },
+    'emergency': { title: 'ביטחון', icon: ShieldCheck },
+    'pension': { title: 'פנסיה וגמל', icon: User },
+    'study_fund': { title: 'קרן השתלמות', icon: BookOpen },
+    'investments': { title: 'תיק השקעות', icon: TrendingUp },
+    'realestate': { title: 'נדל"ן', icon: Building2 },
+    'loans': { title: 'הלוואות', icon: CreditCard },
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles, onUpdateLayout }) => {
   
+  const [isEditing, setIsEditing] = useState(false);
+  const [layout, setLayout] = useState<string[]>([]);
+  const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+
+  // Sync with prop data on load
+  useEffect(() => {
+      if (data.dashboardLayout && data.dashboardLayout.length > 0) {
+          setLayout(data.dashboardLayout);
+      } else {
+          // Fallback default
+          setLayout(['goals', 'cashflow', 'accounts', 'emergency', 'pension', 'study_fund', 'investments', 'realestate', 'loans']);
+      }
+      setHiddenWidgets(data.hiddenWidgets || []);
+  }, [data.dashboardLayout, data.hiddenWidgets]);
+
+  const saveLayout = () => {
+      setIsEditing(false);
+      if (onUpdateLayout) {
+          onUpdateLayout(layout, hiddenWidgets);
+      }
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+      setDraggedItem(id);
+      // Create a ghost image if needed, or rely on browser default
+      if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', id); // For Firefox
+      }
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+      e.preventDefault(); // Necessary to allow dropping
+      if (!draggedItem || draggedItem === targetId) return;
+
+      const newLayout = [...layout];
+      const draggedIdx = newLayout.indexOf(draggedItem);
+      const targetIdx = newLayout.indexOf(targetId);
+
+      if (draggedIdx > -1 && targetIdx > -1) {
+          // Swap logic for real-time preview
+          newLayout.splice(draggedIdx, 1);
+          newLayout.splice(targetIdx, 0, draggedItem);
+          setLayout(newLayout);
+      }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setDraggedItem(null);
+  };
+
+  const toggleWidgetVisibility = (id: string) => {
+      if (hiddenWidgets.includes(id)) {
+          // Restore
+          setHiddenWidgets(prev => prev.filter(w => w !== id));
+          setLayout(prev => [...prev, id]);
+      } else {
+          // Hide
+          setLayout(prev => prev.filter(w => w !== id));
+          setHiddenWidgets(prev => [...prev, id]);
+      }
+  };
+
   const getProfile = (id?: string) => profiles.find(p => p.id === id);
 
   const checkingTotal = data.accounts.filter(a => a.type !== 'emergency').reduce((sum, item) => sum + item.value, 0);
@@ -66,6 +145,25 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   
   const totalExpensesWithDebt = totalExpenses + totalDebtService;
   const monthlyNet = totalIncome - totalExpensesWithDebt;
+
+  // Goals Calculation
+  const activeGoals = data.goals || [];
+  const goalsCount = activeGoals.length;
+  // Calculate total progress. If linked, find the asset value.
+  const goalsProgress = activeGoals.reduce((acc, goal) => {
+      let current = goal.value; // Default to manual value
+      if (goal.isLinked && goal.linkedAssetId) {
+          const allAssets = [...data.accounts, ...data.pensions, ...data.investments];
+          const asset = allAssets.find(a => a.id === goal.linkedAssetId);
+          if (asset) current = asset.value;
+      }
+      return {
+          target: acc.target + goal.targetAmount,
+          current: acc.current + current
+      };
+  }, { target: 0, current: 0 });
+  
+  const goalsPercent = goalsProgress.target > 0 ? (goalsProgress.current / goalsProgress.target) * 100 : 0;
 
   const historyData = useMemo(() => {
     const allItems = [...data.accounts, ...data.pensions, ...data.investments, ...data.realEstate, ...data.loans];
@@ -117,8 +215,163 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(val);
 
+  // Widget Renderer
+  const renderWidget = (id: string) => {
+      const editOverlay = isEditing ? (
+          <div className="absolute inset-0 z-20 bg-slate-50/50 backdrop-blur-[1px] border-2 border-dashed border-blue-300 rounded-2xl flex items-center justify-center cursor-move group">
+              <div className="bg-white p-2 rounded-full shadow-sm text-blue-500"><Move size={24}/></div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); toggleWidgetVisibility(id); }}
+                className="absolute top-2 left-2 p-1.5 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition"
+              >
+                  <X size={16}/>
+              </button>
+          </div>
+      ) : null;
+
+      const wrapperClass = "h-full relative overflow-hidden rounded-2xl transition-all duration-200";
+
+      switch (id) {
+          case 'goals': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='מטרות' 
+                    subtitle={`${goalsCount} יעדים פעילים`}
+                    value={goalsProgress.current}
+                    icon={<Target size={24} className="text-teal-500" />}
+                    colorClass="border-teal-100"
+                    onClick={() => !isEditing && onNavigate('goals')}
+                    footer={
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-teal-500 rounded-full transition-all duration-1000" style={{ width: `${goalsPercent}%` }}></div>
+                            </div>
+                            <span className="text-xs font-bold text-teal-600">{goalsPercent.toFixed(0)}%</span>
+                        </div>
+                    }
+                />
+            </div>
+          );
+          case 'cashflow': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='תזרים' 
+                    subtitle={monthlyNet >= 0 ? 'חיובי' : 'שלילי'}
+                    value={monthlyNet}
+                    icon={<ArrowRightLeft size={24} className="text-rose-500" />}
+                    colorClass="border-rose-100"
+                    onClick={() => !isEditing && onNavigate('cashflow')}
+                    footer={<span className="text-xs text-slate-400">הכנסות: {formatCurrency(totalIncome)} | הוצאות: {formatCurrency(totalExpensesWithDebt)}</span>}
+                />
+            </div>
+          );
+          case 'accounts': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='עו"ש' 
+                    subtitle="נזילות מיידית"
+                    value={checkingTotal}
+                    icon={<Landmark size={24} className="text-emerald-500" />}
+                    colorClass="border-emerald-100"
+                    onClick={() => !isEditing && onNavigate('accounts')}
+                />
+            </div>
+          );
+          case 'emergency': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='קרן ביטחון' 
+                    subtitle="למקרי חירום"
+                    value={emergencyTotal}
+                    icon={<ShieldCheck size={24} className="text-blue-500" />}
+                    colorClass="border-blue-100"
+                    onClick={() => !isEditing && onNavigate('accounts')}
+                />
+            </div>
+          );
+          case 'pension': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DetailedCard 
+                    title='פנסיה וגמל'
+                    icon={<User size={24} className="text-cyan-500" />}
+                    colorClass="border-cyan-100"
+                    total={pensionTotal}
+                    items={data.pensions.filter(p => p.type === 'pension' || p.type === 'provident_fund')}
+                    onClick={() => !isEditing && onNavigate('pension', { type: 'pension' })}
+                    activeProfileId={activeProfileId}
+                    getProfile={getProfile}
+                />
+            </div>
+          );
+          case 'study_fund': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DetailedCard 
+                    title='קרן השתלמות'
+                    icon={<BookOpen size={24} className="text-amber-500" />}
+                    colorClass="border-amber-100"
+                    total={studyFundTotal}
+                    items={data.pensions.filter(p => p.type === 'study_fund')}
+                    onClick={() => !isEditing && onNavigate('pension', { type: 'study_fund' })}
+                    activeProfileId={activeProfileId}
+                    getProfile={getProfile}
+                />
+            </div>
+          );
+          case 'investments': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DetailedCard 
+                    title='תיק השקעות'
+                    icon={<TrendingUp size={24} className="text-purple-500" />}
+                    colorClass="border-purple-100"
+                    total={investmentsTotal}
+                    items={data.investments}
+                    onClick={() => !isEditing && onNavigate('investments')}
+                    activeProfileId={activeProfileId}
+                    getProfile={getProfile}
+                />
+            </div>
+          );
+          case 'realestate': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='נדל"ן' 
+                    subtitle="שווי שוק"
+                    value={realEstateTotal}
+                    icon={<Building2 size={24} className="text-indigo-500" />}
+                    colorClass="border-indigo-100"
+                    onClick={() => !isEditing && onNavigate('realestate')}
+                    footer={<span className="text-xs text-slate-400">משכנתא: {formatCurrency(totalMortgage)} | הון עצמי: {formatCurrency(realEstateTotal - totalMortgage)}</span>}
+                />
+            </div>
+          );
+          case 'loans': return (
+            <div className={wrapperClass}>
+                {editOverlay}
+                <DashboardCard 
+                    title='הלוואות' 
+                    subtitle="התחייבויות שוטפות"
+                    value={totalLoans}
+                    icon={<CreditCard size={24} className="text-rose-500" />}
+                    colorClass="border-rose-100"
+                    onClick={() => !isEditing && onNavigate('loans')}
+                    footer={<span className="text-xs text-slate-400">החזר חודשי כולל: {formatCurrency(totalLoanPayments)}</span>}
+                />
+            </div>
+          );
+          default: return null;
+      }
+  };
+
   return (
-    <div className="p-4 lg:p-8 space-y-8 animate-fade-in">
+    <div className="p-4 lg:p-8 space-y-8 animate-fade-in pb-20">
       
       {/* Header Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -220,7 +473,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
             
             <div className="flex-1 w-full min-h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={historyData} margin={{ left: 20, right: 20 }}>
+                    <AreaChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
@@ -228,13 +481,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="date" stroke="#94a3b8" tickFormatter={(d) => { const date = new Date(d); return `${date.getDate()}/${date.getMonth()+1}`; }} tick={{fontSize: 12}} />
+                        <XAxis dataKey="date" stroke="#94a3b8" tickFormatter={(d) => { const date = new Date(d); return `${date.getDate()}/${date.getMonth()+1}`; }} tick={{fontSize: 12}} tickMargin={10} />
                         <YAxis 
                             stroke="#94a3b8" 
                             tickFormatter={(val) => `₪${(val/1000).toFixed(0)}k`} 
-                            tick={{fontSize: 12}} 
-                            width={90}
-                            tickMargin={20}
+                            tick={{fontSize: 11}} 
+                            width={55}
+                            tickMargin={4}
+                            orientation="left"
                         />
                         <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} formatter={(val: number) => formatCurrency(val)} />
                         <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
@@ -245,89 +499,69 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
       </div>
 
       <div id="tour-asset-grid">
-        <h2 className="text-xl font-bold text-slate-800 mt-4 mb-5">התיק שלי</h2>
+        <div className="flex items-center justify-between mt-8 mb-5">
+            <h2 className="text-xl font-bold text-slate-800">התיק שלי</h2>
+            
+            {/* Edit Mode Toggle */}
+            <button 
+                onClick={() => isEditing ? saveLayout() : setIsEditing(true)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition ${isEditing ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+                {isEditing ? (
+                    <>
+                        <Save size={16} />
+                        שמור סידור
+                    </>
+                ) : (
+                    <>
+                        <Move size={16} />
+                        סידור דאשבורד
+                    </>
+                )}
+            </button>
+        </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
-            <DashboardCard 
-                title='תזרים' 
-                subtitle={monthlyNet >= 0 ? 'חיובי' : 'שלילי'}
-                value={monthlyNet}
-                icon={<ArrowRightLeft size={24} className="text-rose-500" />}
-                colorClass="border-rose-100"
-                onClick={() => onNavigate('cashflow')}
-                footer={<span className="text-xs text-slate-400">הכנסות: {formatCurrency(totalIncome)} | הוצאות: {formatCurrency(totalExpensesWithDebt)}</span>}
-            />
-            <DashboardCard 
-                title='עו"ש' 
-                subtitle="נזילות מיידית"
-                value={checkingTotal}
-                icon={<Landmark size={24} className="text-emerald-500" />}
-                colorClass="border-emerald-100"
-                onClick={() => onNavigate('accounts')}
-            />
-            <DashboardCard 
-                title='קרן ביטחון' 
-                subtitle="למקרי חירום"
-                value={emergencyTotal}
-                icon={<ShieldCheck size={24} className="text-blue-500" />}
-                colorClass="border-blue-100"
-                onClick={() => onNavigate('accounts')}
-            />
+        {/* Dynamic Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {layout.map(id => (
+                <div 
+                    key={id}
+                    draggable={isEditing}
+                    onDragStart={(e) => handleDragStart(e, id)}
+                    onDragOver={(e) => handleDragOver(e, id)}
+                    onDrop={handleDrop}
+                    className="h-full"
+                >
+                    {renderWidget(id)}
+                </div>
+            ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
-            <DetailedCard 
-                title='פנסיה וגמל'
-                icon={<User size={24} className="text-cyan-500" />}
-                colorClass="border-cyan-100"
-                total={pensionTotal}
-                items={data.pensions.filter(p => p.type === 'pension' || p.type === 'provident_fund')}
-                onClick={() => onNavigate('pension', { type: 'pension' })}
-                activeProfileId={activeProfileId}
-                getProfile={getProfile}
-            />
-            <DetailedCard 
-                title='קרן השתלמות'
-                icon={<BookOpen size={24} className="text-amber-500" />}
-                colorClass="border-amber-100"
-                total={studyFundTotal}
-                items={data.pensions.filter(p => p.type === 'study_fund')}
-                onClick={() => onNavigate('pension', { type: 'study_fund' })}
-                activeProfileId={activeProfileId}
-                getProfile={getProfile}
-            />
-            <DetailedCard 
-                title='תיק השקעות'
-                icon={<TrendingUp size={24} className="text-purple-500" />}
-                colorClass="border-purple-100"
-                total={investmentsTotal}
-                items={data.investments}
-                onClick={() => onNavigate('investments')}
-                activeProfileId={activeProfileId}
-                getProfile={getProfile}
-            />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <DashboardCard 
-                title='נדל"ן' 
-                subtitle="שווי שוק"
-                value={realEstateTotal}
-                icon={<Building2 size={24} className="text-indigo-500" />}
-                colorClass="border-indigo-100"
-                onClick={() => onNavigate('realestate')}
-                footer={<span className="text-xs text-slate-400">משכנתא: {formatCurrency(totalMortgage)} | הון עצמי: {formatCurrency(realEstateTotal - totalMortgage)}</span>}
-            />
-            <DashboardCard 
-                title='הלוואות' 
-                subtitle="התחייבויות שוטפות"
-                value={totalLoans}
-                icon={<CreditCard size={24} className="text-rose-500" />}
-                colorClass="border-rose-100"
-                onClick={() => onNavigate('loans')}
-                footer={<span className="text-xs text-slate-400">החזר חודשי כולל: {formatCurrency(totalLoanPayments)}</span>}
-            />
-        </div>
+        {/* Hidden Widgets Area (Only in Edit Mode) */}
+        {isEditing && hiddenWidgets.length > 0 && (
+            <div className="mt-8 p-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-3xl animate-fade-in">
+                <h3 className="font-bold text-slate-500 mb-4 flex items-center gap-2 text-sm">
+                    <Plus size={16}/> הוסף רכיבים מוסתרים לדאשבורד
+                </h3>
+                <div className="flex flex-wrap gap-4">
+                    {hiddenWidgets.map(id => {
+                        const widget = WIDGETS[id];
+                        const Icon = widget?.icon || Plus;
+                        return (
+                            <button 
+                                key={id}
+                                onClick={() => toggleWidgetVisibility(id)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-emerald-300 hover:text-emerald-600 transition"
+                            >
+                                <Icon size={16} />
+                                <span className="font-bold text-sm">{widget?.title || id}</span>
+                                <Plus size={14} className="bg-emerald-100 text-emerald-600 rounded-full p-0.5 ml-2"/>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );
@@ -343,7 +577,7 @@ const DashboardCard: React.FC<{
     footer?: React.ReactNode;
 }> = ({ title, subtitle, value, icon, onClick, colorClass, footer }) => {
     return (
-        <button onClick={onClick} className={`bg-white rounded-2xl p-6 border ${colorClass} shadow-sm transition-all duration-300 flex flex-col items-start group relative hover:shadow-md hover:-translate-y-1 h-full w-full`}>
+        <button onClick={onClick} className={`bg-white rounded-2xl p-6 border ${colorClass} shadow-sm transition-all duration-300 flex flex-col items-start group relative hover:shadow-md hover:-translate-y-1 h-full w-full text-right`}>
             <div className="w-full flex justify-between items-start mb-4">
                 <div className="flex gap-4 items-center">
                     <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all">{icon}</div>
@@ -375,7 +609,7 @@ const DetailedCard: React.FC<{
     const topItems = [...items].sort((a,b) => b.value - a.value).slice(0, 2);
 
     return (
-        <button onClick={onClick} className={`bg-white rounded-2xl p-6 border ${colorClass} shadow-sm transition-all duration-300 flex flex-col items-start group relative hover:shadow-md hover:-translate-y-1 h-full w-full`}>
+        <button onClick={onClick} className={`bg-white rounded-2xl p-6 border ${colorClass} shadow-sm transition-all duration-300 flex flex-col items-start group relative hover:shadow-md hover:-translate-y-1 h-full w-full text-right`}>
              <div className="w-full flex justify-between items-start mb-2">
                 <div className="flex gap-4 items-center">
                     <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all">{icon}</div>

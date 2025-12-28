@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, Umbrella, TrendingUp, Building2, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Wallet, Umbrella, TrendingUp, Building2, Menu, X, Target } from 'lucide-react';
 import { TabId } from '../types';
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggleSidebar }) => {
   const menuItems = [
     { id: 'dashboard' as TabId, label: 'סיכום פיננסי', icon: LayoutDashboard },
+    { id: 'goals' as TabId, label: 'מטרות ויעדים', icon: Target },
     { id: 'accounts' as TabId, label: 'עו"ש וביטחון', icon: Wallet },
     { id: 'pension' as TabId, label: 'פנסיה וגמל', icon: Umbrella },
     { id: 'investments' as TabId, label: 'השקעות', icon: TrendingUp },
@@ -65,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggl
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">IL</div>
               <div className="text-xs text-slate-400">
                  <div>Israel Mode</div>
-                 <div className="text-slate-500">v2.0 Dark</div>
+                 <div className="text-slate-500">v2.1 Dark</div>
               </div>
            </div>
         </div>

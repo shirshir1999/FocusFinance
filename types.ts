@@ -1,6 +1,6 @@
 
-export type TabId = 'dashboard' | 'accounts' | 'pension' | 'investments' | 'realestate' | 'loans' | 'cashflow' | 'feecalc' | 'pension_calc' | 'switching_calc' | 'future_projection' | 'history_view';
-export type AssetCategory = 'accounts' | 'pensions' | 'investments' | 'realEstate' | 'loans';
+export type TabId = 'dashboard' | 'accounts' | 'pension' | 'investments' | 'realestate' | 'loans' | 'goals' | 'cashflow' | 'feecalc' | 'pension_calc' | 'switching_calc' | 'future_projection' | 'history_view';
+export type AssetCategory = 'accounts' | 'pensions' | 'investments' | 'realEstate' | 'loans' | 'goals';
 
 export interface UserProfile {
     id: string;
@@ -100,6 +100,16 @@ export interface LoanItem extends BaseItem {
     startDate?: string;
 }
 
+export interface FinancialGoal extends BaseItem {
+    targetAmount: number;
+    targetDate?: string; // Optional deadline
+    linkedAssetId?: string; // If linked to an account/investment/pension
+    linkedAssetCategory?: AssetCategory;
+    isLinked: boolean;
+    monthlyContribution?: number; // Planned contribution
+    assumedRate?: number; // For projection
+}
+
 export interface IncomeItem {
     id: string;
     source: string;
@@ -111,9 +121,13 @@ export interface CashFlowState {
     additionalIncomes: IncomeItem[];
     includeRealEstateRent: boolean;
     realEstateRentInclusionPercentage: number; // 0 to 100
-    expensesMode: 'simple' | 'detailed';
+    expensesMode: 'simple' | 'detailed' | 'tracking'; // Added 'tracking'
     generalExpense: number;
-    detailedExpenses: Record<string, number>;
+    detailedExpenses: Record<string, number>; // The "Budget" or "Average"
+    monthlyExpenses?: Record<string, Record<string, number>>; // "YYYY-MM" -> { category: amount }
+    customCategories?: string[]; // User defined categories
+    hiddenCategories?: string[]; // Categories user hid
+    categoriesOrder?: string[]; // Custom sort order
 }
 
 export interface FinancialState {
@@ -125,7 +139,12 @@ export interface FinancialState {
   investments: InvestmentItem[];
   realEstate: RealEstateItem[];
   loans: LoanItem[];
+  goals: FinancialGoal[];
   cashFlow?: CashFlowState;
+  
+  // Dashboard Customization
+  dashboardLayout?: string[];
+  hiddenWidgets?: string[];
 }
 
 export interface ChartDataPoint {

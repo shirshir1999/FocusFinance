@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { TreeLogo } from './TreeLogo';
-import { Chrome, ShieldCheck, CheckCircle2, TrendingUp, Wallet, Umbrella, Building2, CreditCard, ArrowRightLeft, User, BookOpen, Calculator, Edit2 } from 'lucide-react';
+import { Chrome, ShieldCheck, CheckCircle2, TrendingUp, Wallet, Umbrella, Building2, CreditCard, ArrowRightLeft, User, BookOpen, Calculator, Edit2, Target, Landmark } from 'lucide-react';
 import { supabase, hasMissingKeys } from '../services/supabase';
 import { PieChart, Pie, Cell, AreaChart, Area, ResponsiveContainer, XAxis, CartesianGrid } from 'recharts';
 
@@ -223,10 +223,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                         {/* Title */}
                         <h2 className="text-sm font-bold text-slate-800 mt-1">התיק שלי</h2>
 
-                        {/* Asset Cards Grid - Tightened gaps */}
-                        
-                        {/* Row 1 */}
-                        <div className="grid grid-cols-3 gap-3">
+                        {/* Asset Cards Grid - Tightened gaps - 3x3 Layout matching app defaults */}
+                        <div className="grid grid-cols-3 gap-3 pb-2">
+                            
+                            {/* 1. Goals */}
+                            <div className="bg-white rounded-2xl p-3 border border-teal-100 shadow-sm">
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1 bg-slate-50 rounded-lg"><Target size={12} className="text-teal-500"/></div>
+                                        <div><div className="font-bold text-xs text-slate-700">מטרות</div><div className="text-[9px] text-slate-400">2 פעילות</div></div>
+                                    </div>
+                                </div>
+                                <div className="text-sm font-black text-slate-800">₪45,000</div>
+                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+                                    <div className="h-full bg-teal-500 rounded-full" style={{ width: '45%' }}></div>
+                                </div>
+                            </div>
+
+                            {/* 2. Cashflow */}
                             <div className="bg-white rounded-2xl p-3 border border-rose-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
@@ -237,16 +251,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 <div className="text-sm font-black text-slate-800">₪4,200</div>
                             </div>
 
+                            {/* 3. Accounts (Checking) */}
                             <div className="bg-white rounded-2xl p-3 border border-emerald-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
-                                        <div className="p-1 bg-slate-50 rounded-lg"><Wallet size={12} className="text-emerald-500"/></div>
+                                        <div className="p-1 bg-slate-50 rounded-lg"><Landmark size={12} className="text-emerald-500"/></div>
                                         <div><div className="font-bold text-xs text-slate-700">עו"ש</div><div className="text-[9px] text-slate-400">נזילות</div></div>
                                     </div>
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪150,000</div>
                             </div>
 
+                            {/* 4. Emergency */}
                             <div className="bg-white rounded-2xl p-3 border border-blue-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
@@ -256,11 +272,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 </div>
                                 <div className="text-sm font-black text-slate-800">₪100,000</div>
                             </div>
-                        </div>
 
-                        {/* Row 2 */}
-                        <div className="grid grid-cols-3 gap-3">
-                             <div className="bg-white rounded-2xl p-3 border border-cyan-100 shadow-sm">
+                            {/* 5. Pension */}
+                            <div className="bg-white rounded-2xl p-3 border border-cyan-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
                                         <div className="p-1 bg-slate-50 rounded-lg"><User size={12} className="text-cyan-500"/></div>
@@ -274,6 +288,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 </div>
                             </div>
 
+                            {/* 6. Study Fund */}
                             <div className="bg-white rounded-2xl p-3 border border-amber-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
@@ -287,7 +302,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 </div>
                             </div>
 
-                             <div className="bg-white rounded-2xl p-3 border border-purple-100 shadow-sm">
+                            {/* 7. Investments */}
+                            <div className="bg-white rounded-2xl p-3 border border-purple-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
                                         <div className="p-1 bg-slate-50 rounded-lg"><TrendingUp size={12} className="text-purple-500"/></div>
@@ -299,11 +315,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                     <div className="bg-slate-50 p-0.5 rounded text-[9px] flex justify-between"><span>מסחר</span><span className="font-bold">420k</span></div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Row 3 - Now fully visible */}
-                        <div className="grid grid-cols-2 gap-3 pb-2">
-                             <div className="bg-white rounded-2xl p-3 border border-indigo-100 shadow-sm">
+                            {/* 8. Real Estate */}
+                            <div className="bg-white rounded-2xl p-3 border border-indigo-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
                                         <div className="p-1 bg-slate-50 rounded-lg"><Building2 size={12} className="text-indigo-500"/></div>
@@ -314,6 +328,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 <div className="mt-1 text-[9px] text-slate-400">משכנתא: 920k</div>
                             </div>
 
+                            {/* 9. Loans */}
                             <div className="bg-white rounded-2xl p-3 border border-rose-100 shadow-sm">
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
@@ -324,6 +339,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 <div className="text-sm font-black text-slate-800">₪45,000</div>
                                 <div className="mt-1 text-[9px] text-slate-400">החזר חודשי: ₪1,200</div>
                             </div>
+
                         </div>
 
                      </div>
