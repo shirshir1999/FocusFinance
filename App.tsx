@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import BusinessDashboard from './components/BusinessDashboard'; 
@@ -123,6 +122,10 @@ const App: React.FC = () => {
   // Load Data Logic
   const loadPortfolioData = async (portfolioId: string) => {
       setLoading(true);
+      
+      // Reset view tabs when loading new data
+      setActiveView('dashboard');
+      
       try {
           const cloudData = await fetchUserData(portfolioId);
           if (cloudData) {
@@ -151,7 +154,7 @@ const App: React.FC = () => {
                   setBusinessData(cloudData); // Store advisor's data
                   setViewMode('business_hub'); // Default to business hub
               } else {
-                  // Normal user or Client View
+                  // Normal user or Client View - FORCE Dashboard view
                   setViewMode('dashboard');
               }
 
@@ -176,6 +179,7 @@ const App: React.FC = () => {
               
               if (portfolioId === currentUser?.id) setShowTerms(true);
               setActiveProfileId('main');
+              setViewMode('dashboard');
           }
       } catch (e) {
           console.error("Error loading data", e);
@@ -230,11 +234,13 @@ const App: React.FC = () => {
 
   // --- Business / Consultant Logic ---
 
-  const toggleBusinessAccount = () => {
-      setData(prev => ({ ...prev, isBusinessAccount: !prev.isBusinessAccount }));
-      // If turning ON, switch to hub. If OFF, standard dashboard.
-      if (!data.isBusinessAccount) setViewMode('business_hub');
-      else setViewMode('dashboard');
+  const handleSwitchToBusinessHub = () => {
+      // Upgrade to business account if not already
+      if (!data.isBusinessAccount) {
+          setData(prev => ({ ...prev, isBusinessAccount: true }));
+      }
+      // Always navigate to hub
+      setViewMode('business_hub');
       setIsProfileMenuOpen(false);
   };
 
@@ -562,7 +568,7 @@ const App: React.FC = () => {
 
                       <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
 
-                      {/* Business Mode Back Button */}
+                      {/* Business Mode Back Button (Advisor Only) */}
                       {isBusinessView && viewMode !== 'business_hub' && !viewingShared && (
                           <button 
                             onClick={handleBackToBusiness}
@@ -587,56 +593,60 @@ const App: React.FC = () => {
                           
                           {isProfileMenuOpen && (
                               <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in">
-                                  {!isBusinessView && data.profiles?.length > 1 && (
-                                      <>
-                                        <button onClick={() => { setActiveProfileId('all'); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-sm font-medium flex items-center gap-2"><div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div>מבט משפחתי כולל</button>
-                                        <div className="my-1 border-t border-slate-100"></div>
-                                        {data.profiles?.map(p => (<div key={p.id} className="flex items-center justify-between px-2 hover:bg-slate-50 group"><button onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }} className="flex-1 text-right px-2 py-2 text-sm font-medium flex items-center gap-2"><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>{p.name[0]}</div>{p.name}</button>{!p.isMainUser && (<button onClick={(e) => handleProfileDeleteInit(e, p.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100" title="מחיקת פרופיל"><Trash2 size={14}/></button>)}</div>))}
-                                        <div className="my-1 border-t border-slate-100"></div>
-                                      </>
-                                  )}
                                   
-                                  {/* SHARED PORTFOLIOS (CLIENT VIEW) */}
-                                  {!isBusinessView && sharedPortfolios.length > 0 && (
+                                  {/* --- PERSONAL DASHBOARD CONTEXT --- */}
+                                  {!isBusinessView && viewMode === 'dashboard' && (
                                       <>
-                                        <div className="px-4 py-1.5 text-xs text-slate-400 font-bold">תיקים משותפים</div>
-                                        {sharedPortfolios.map(p => (
-                                            <button 
-                                                key={p.id} 
-                                                onClick={() => handleSwitchToShared(p.id)}
-                                                className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-700 text-sm font-medium flex items-center gap-2"
-                                            >
-                                                <Briefcase size={14}/>
-                                                {p.name}
-                                            </button>
-                                        ))}
+                                        {/* My Private Profiles */}
+                                        {data.profiles?.length > 1 && (
+                                            <>
+                                                <button onClick={() => { setActiveProfileId('all'); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-sm font-medium flex items-center gap-2"><div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div>מבט משפחתי כולל</button>
+                                                <div className="my-1 border-t border-slate-100"></div>
+                                                {data.profiles?.map(p => (
+                                                    <div key={p.id} className="flex items-center justify-between px-2 hover:bg-slate-50 group">
+                                                        <button onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }} className="flex-1 text-right px-2 py-2 text-sm font-medium flex items-center gap-2">
+                                                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>{p.name[0]}</div>
+                                                            {p.name}
+                                                        </button>
+                                                        {!p.isMainUser && (<button onClick={(e) => handleProfileDeleteInit(e, p.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100" title="מחיקת פרופיל"><Trash2 size={14}/></button>)}
+                                                    </div>
+                                                ))}
+                                                <div className="my-1 border-t border-slate-100"></div>
+                                            </>
+                                        )}
+                                        
+                                        <button onClick={() => { setIsAddProfileOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-600 text-sm font-bold flex items-center gap-2"><Plus size={14}/>הוסף פרופיל</button>
+                                        
+                                        {/* Switch/Activate Business Portal - ALWAYS VISIBLE */}
                                         <div className="my-1 border-t border-slate-100"></div>
-                                      </>
-                                  )}
-
-                                  {/* RETURN TO PERSONAL */}
-                                  {viewingShared && (
-                                      <>
-                                        <button 
-                                            onClick={handleBackToPersonal}
-                                            className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center gap-2"
-                                        >
-                                            <ArrowRight size={14}/>
-                                            חזור לתיק אישי
+                                        <button onClick={handleSwitchToBusinessHub} className="w-full text-right px-4 py-2 hover:bg-indigo-50 text-indigo-700 text-sm font-bold flex items-center gap-2">
+                                            <Briefcase size={14}/>
+                                            עבור לפורטל יועצים
                                         </button>
-                                        <div className="my-1 border-t border-slate-100"></div>
                                       </>
                                   )}
 
-                                  {!isBusinessView && !viewingShared && (
-                                      <button onClick={() => { setIsAddProfileOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-600 text-sm font-bold flex items-center gap-2"><Plus size={14}/>הוסף פרופיל</button>
+                                  {/* --- BUSINESS PORTAL CONTEXT --- */}
+                                  {viewMode === 'business_hub' && (
+                                      <button onClick={() => { setViewMode('dashboard'); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center gap-2">
+                                          <ArrowRight size={14}/>
+                                          חזרה לדאשבורד האישי
+                                      </button>
                                   )}
 
-                                  {/* Business Toggle - Moved down */}
-                                  {!viewingShared && (
-                                      <button onClick={toggleBusinessAccount} className="w-full text-right px-4 py-2 hover:bg-indigo-50 text-indigo-700 text-sm font-bold flex items-center gap-2">
-                                          <Briefcase size={14}/>
-                                          {data.isBusinessAccount ? (viewMode === 'business_hub' ? 'מעבר לדאשבורד אישי' : 'חזרה לפורטל יועצים') : 'עבור לפורטל העסקי'}
+                                  {/* --- CLIENT VIEW CONTEXT --- */}
+                                  {isBusinessView && !viewingShared && (
+                                      <button onClick={handleBackToBusiness} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center gap-2">
+                                          <ArrowRight size={14}/>
+                                          חזרה לפורטל העסקי
+                                      </button>
+                                  )}
+
+                                  {/* SHARED VIEW CONTEXT (Regular User) */}
+                                  {viewingShared && (
+                                      <button onClick={handleBackToPersonal} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center gap-2">
+                                          <ArrowRight size={14}/>
+                                          חזרה לתיק אישי
                                       </button>
                                   )}
                                   
