@@ -12,6 +12,7 @@ interface DashboardProps {
   activeProfileId: string;
   profiles: UserProfile[];
   onUpdateLayout?: (layout: string[], hidden: string[]) => void;
+  headerBadge?: string | null;
 }
 
 const COLORS = ['#10B981', '#3B82F6', '#06B6D4', '#F59E0B', '#8B5CF6', '#6366F1'];
@@ -29,7 +30,7 @@ const WIDGETS: Record<string, { title: string, icon: any }> = {
     'loans': { title: 'הלוואות', icon: CreditCard },
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles, onUpdateLayout }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEditName, activeProfileId, profiles, onUpdateLayout, headerBadge }) => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [layout, setLayout] = useState<string[]>([]);
@@ -139,7 +140,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
   let totalExpenses = 0;
   if (data.cashFlow?.expensesMode === 'simple') {
       totalExpenses = data.cashFlow.generalExpense;
+  } else if (data.cashFlow?.expensesMode === 'tracking') {
+      // Calculate expenses for current month
+      const now = new Date();
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthExpenses = data.cashFlow.monthlyExpenses?.[currentMonthKey] || {};
+      totalExpenses = (Object.values(currentMonthExpenses) as number[]).reduce((a: number, b: number) => a + b, 0);
   } else {
+      // Detailed / Budget mode
       totalExpenses = (Object.values(data.cashFlow?.detailedExpenses || {}) as number[]).reduce((a: number, b: number) => a + b, 0);
   }
   
@@ -299,7 +307,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
                 {editOverlay}
                 <DashboardCard 
                     title='תזרים' 
-                    subtitle={monthlyNet >= 0 ? 'חיובי' : 'שלילי'}
+                    subtitle={data.cashFlow?.expensesMode === 'tracking' ? 'נטו החודש' : (monthlyNet >= 0 ? 'חיובי' : 'שלילי')}
                     value={monthlyNet}
                     icon={<ArrowRightLeft size={24} className="text-rose-500" />}
                     colorClass="border-rose-100"
@@ -417,6 +425,11 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onNavigate, userName, onEdi
       {/* Header Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
+            {headerBadge && (
+                <span className="text-emerald-600 font-bold text-xs mb-1 block bg-emerald-50 px-2 py-0.5 rounded-md w-fit shadow-sm">
+                    {headerBadge}
+                </span>
+            )}
             <div className="flex items-center gap-2 group cursor-pointer w-fit" onClick={onEditName} title="לחץ לעריכת שם">
                 <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
                     שלום, {userName || 'אורח'}

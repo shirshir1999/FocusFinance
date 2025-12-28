@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { LayoutDashboard, Wallet, Umbrella, TrendingUp, Building2, Menu, X, Target } from 'lucide-react';
+import { LayoutDashboard, Wallet, Umbrella, TrendingUp, Building2, Menu, X, Target, Briefcase, ArrowRight } from 'lucide-react';
 import { TabId } from '../types';
 
 interface SidebarProps {
@@ -7,9 +8,11 @@ interface SidebarProps {
   onTabChange: (tab: TabId) => void;
   isOpen: boolean;
   toggleSidebar: () => void;
+  isBusinessView?: boolean; // Are we viewing a client?
+  onBackToBusiness?: () => void; // Function to go back
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggleSidebar }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggleSidebar, isBusinessView, onBackToBusiness }) => {
   const menuItems = [
     { id: 'dashboard' as TabId, label: 'סיכום פיננסי', icon: LayoutDashboard },
     { id: 'goals' as TabId, label: 'מטרות ויעדים', icon: Target },
@@ -36,7 +39,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggl
           </button>
         </div>
 
-        <nav className="mt-8 px-4 space-y-3 flex-1">
+        {/* Business Back Button */}
+        {isBusinessView && onBackToBusiness && (
+            <div className="px-4 mt-6">
+                <button 
+                    onClick={onBackToBusiness}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition shadow-lg shadow-emerald-900/20"
+                >
+                    <ArrowRight size={18} />
+                    <span>חזרה ללקוחות</span>
+                </button>
+                <div className="flex items-center gap-2 px-2 mt-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <Briefcase size={12}/>
+                    מצב צפייה בלקוח
+                </div>
+            </div>
+        )}
+
+        <nav className="mt-6 px-4 space-y-3 flex-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -66,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, isOpen, toggl
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">IL</div>
               <div className="text-xs text-slate-400">
                  <div>Israel Mode</div>
-                 <div className="text-slate-500">v2.1 Dark</div>
+                 <div className="text-slate-500">v2.3 Pro</div>
               </div>
            </div>
         </div>

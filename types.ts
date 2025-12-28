@@ -131,7 +131,21 @@ export interface CashFlowState {
     categoriesOrder?: string[]; // Custom sort order
 }
 
+export interface ManagedClient {
+    id: string; // The UUID of the client's portfolio
+    name: string;
+    email?: string;
+    lastAccess?: string;
+}
+
 export interface FinancialState {
+  // Business / Consultant Mode
+  isBusinessAccount?: boolean;
+  managedClients?: ManagedClient[]; // If business, list of clients
+  
+  // Sharing & Auth
+  authorizedEmails?: string[]; // Who can access this specific portfolio (besides owner)
+
   hasAcceptedTerms?: boolean; // Flag for ToS acceptance
   termsAcceptedAt?: string; // Timestamp of acceptance for audit
   profiles?: UserProfile[]; // List of people

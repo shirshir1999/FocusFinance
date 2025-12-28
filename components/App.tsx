@@ -362,13 +362,13 @@ const App: React.FC = () => {
                     realEstate: getFilteredItems(data.realEstate),
                     loans: getFilteredItems(data.loans),
                 }}
-                onNavigate={navigateTo} 
+                onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }} 
                 userName={getMainUserName()} 
                 onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
                 activeProfileId={activeProfileId}
                 profiles={data.profiles || []}
             />
-            <ModalComponent {...props} {...commonModalProps} onClose={() => navigateTo('dashboard')} />
+            <ModalComponent {...props} {...commonModalProps} onClose={() => { setActiveView('dashboard'); setViewParams(null); }} />
         </>
     );
 
@@ -389,7 +389,7 @@ const App: React.FC = () => {
     const tabProps = {
         profiles: data.profiles || [],
         activeProfileId: activeProfileId,
-        onBack: () => navigateTo('dashboard')
+        onBack: () => { setActiveView('dashboard'); setViewParams(null); }
     };
 
     switch (activeView) {
@@ -404,7 +404,7 @@ const App: React.FC = () => {
                     realEstate: getFilteredItems(data.realEstate),
                     loans: getFilteredItems(data.loans),
                 }} 
-                onNavigate={navigateTo} 
+                onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }} 
                 userName={getMainUserName()}
                 onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
                 activeProfileId={activeProfileId}
@@ -474,13 +474,13 @@ const App: React.FC = () => {
                 loans={getFilteredItems(data.loans)}
                 realEstate={getFilteredItems(data.realEstate)}
                 onUpdate={handleUpdateCashFlow}
-                onBack={() => navigateTo('dashboard')}
+                onBack={() => { setActiveView('dashboard'); setViewParams(null); }}
             />
         );
       default:
         return <Dashboard 
             data={data}
-            onNavigate={navigateTo} 
+            onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }}
             userName={getMainUserName()}
             onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }}
             activeProfileId={activeProfileId}
@@ -642,137 +642,12 @@ const App: React.FC = () => {
           </footer>
       </div>
 
-      {/* Terms of Service Modal - Only show if logged in and hasn't accepted */}
       {currentUser && showTerms && <TermsModal onAccept={handleAcceptTerms} />}
-
-      {/* Edit Name Modal */}
-      {isEditNameOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}>
-              <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3>
-                  <input 
-                    type="text" 
-                    value={newNameInput} 
-                    onChange={(e) => setNewNameInput(e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    placeholder="הכנס שם מלא"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                      <button onClick={() => setIsEditNameOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button>
-                      <button onClick={handleEditName} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold">שמור</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* Add Profile Modal */}
-      {isAddProfileOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddProfileOpen(false)}>
-              <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}>
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-600">
-                      <Users size={24} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-2">הוספת פרופיל חדש</h3>
-                  <p className="text-sm text-slate-500 mb-4">הוסיפו פרופיל עבור בן/בת זוג או ילד לניהול נפרד או משותף.</p>
-                  <input 
-                    type="text" 
-                    value={newNameInput} 
-                    onChange={(e) => setNewNameInput(e.target.value)}
-                    className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none"
-                    placeholder="שם הפרופיל (לדוגמה: בן)"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                      <button onClick={() => setIsAddProfileOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button>
-                      <button onClick={handleAddProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">הוסף פרופיל</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* Delete Profile Modal */}
-      {deleteProfileState.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}>
-              <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-                  <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
-                      <Trash2 size={32} />
-                  </div>
-                  <h3 className="font-black text-2xl text-slate-800 mb-2 text-center">מחיקת פרופיל</h3>
-                  
-                  {deleteProfileState.step === 'confirm' ? (
-                      <>
-                        <p className="text-slate-500 mb-8 leading-relaxed text-center">
-                            אתם עומדים למחוק את הפרופיל. מה תרצו לעשות עם הנכסים המשויכים אליו?
-                        </p>
-                        <div className="space-y-3">
-                            {data.profiles && data.profiles.length > 1 && (
-                                <button 
-                                    onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'action' }))}
-                                    className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between group transition"
-                                >
-                                    <span className="font-bold text-slate-700">העברת נכסים למשתמש אחר</span>
-                                    <ArrowRight size={20} className="text-slate-400 group-hover:text-slate-600"/>
-                                </button>
-                            )}
-                            <button 
-                                onClick={() => executeDeleteProfile('delete_assets')}
-                                className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 rounded-xl font-bold transition flex items-center justify-center gap-2"
-                            >
-                                <Trash2 size={18}/>
-                                מחיקת הפרופיל והנכסים שלו
-                            </button>
-                            <button 
-                                onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}
-                                className="w-full p-3 text-slate-400 hover:text-slate-600 text-sm font-medium mt-2"
-                            >
-                                ביטול
-                            </button>
-                        </div>
-                      </>
-                  ) : (
-                      <>
-                        <p className="text-slate-500 mb-6 leading-relaxed text-center">
-                            לאיזה משתמש תרצו להעביר את הנכסים?
-                        </p>
-                        <div className="space-y-2 mb-6 max-h-48 overflow-y-auto custom-scrollbar">
-                            {data.profiles?.filter(p => p.id !== deleteProfileState.profileId).map(p => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => setDeleteProfileState(prev => ({ ...prev, targetProfileId: p.id }))}
-                                    className={`w-full p-3 rounded-xl flex items-center gap-3 border transition ${deleteProfileState.targetProfileId === p.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:bg-slate-50'}`}
-                                >
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0" style={{ backgroundColor: p.color }}>
-                                        {p.name[0]}
-                                    </div>
-                                    <span className="font-bold text-slate-700">{p.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'confirm', targetProfileId: undefined }))}
-                                className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl"
-                            >
-                                חזרה
-                            </button>
-                            <button 
-                                onClick={() => executeDeleteProfile('transfer_assets')}
-                                disabled={!deleteProfileState.targetProfileId}
-                                className="flex-1 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                אשר העברה ומחיקה
-                            </button>
-                        </div>
-                      </>
-                  )}
-              </div>
-          </div>
-      )}
-
-      {/* Help Modal */}
-      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
-
+      {isEditNameOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="הכנס שם מלא" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsEditNameOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleEditName} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold">שמור</button></div></div></div>)}
+      {isAddProfileOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddProfileOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-600"><Users size={24} /></div><h3 className="text-lg font-bold text-slate-800 mb-2">הוספת פרופיל חדש</h3><p className="text-sm text-slate-500 mb-4">הוסיפו פרופיל עבור בן/בת זוג או ילד לניהול נפרד או משותף.</p><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="שם הפרופיל (לדוגמה: בן)" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsAddProfileOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleAddProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">הוסף פרופיל</button></div></div></div>)}
+      {deleteProfileState.isOpen && (<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}><div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}><div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500"><Trash2 size={32} /></div><h3 className="font-black text-2xl text-slate-800 mb-2 text-center">מחיקת פרופיל</h3>{deleteProfileState.step === 'confirm' ? (<><p className="text-slate-500 mb-8 leading-relaxed text-center">אתם עומדים למחוק את הפרופיל. מה תרצו לעשות עם הנכסים המשויכים אליו?</p><div className="space-y-3">{(data.profiles && data.profiles.length > 1) && (<button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'action' }))} className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between group transition"><span className="font-bold text-slate-700">העברת נכסים למשתמש אחר</span><ArrowRight size={20} className="text-slate-400 group-hover:text-slate-600"/></button>)}<button onClick={() => executeDeleteProfile('delete_assets')} className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 rounded-xl font-bold transition flex items-center justify-center gap-2"><Trash2 size={18}/>מחיקת הפרופיל והנכסים שלו</button><button onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })} className="w-full p-3 text-slate-400 hover:text-slate-600 text-sm font-medium mt-2">ביטול</button></div></>) : (<><p className="text-slate-500 mb-6 leading-relaxed text-center">לאיזה משתמש תרצו להעביר את הנכסים?</p><div className="space-y-2 mb-6 max-h-48 overflow-y-auto custom-scrollbar">{data.profiles?.filter(p => p.id !== deleteProfileState.profileId).map(p => (<button key={p.id} onClick={() => setDeleteProfileState(prev => ({ ...prev, targetProfileId: p.id }))} className={`w-full p-3 rounded-xl flex items-center gap-3 border transition ${deleteProfileState.targetProfileId === p.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:bg-slate-50'}`}><div className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0" style={{ backgroundColor: p.color }}>{p.name[0]}</div><span className="font-bold text-slate-700">{p.name}</span></button>))}</div><div className="flex gap-3"><button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'confirm', targetProfileId: undefined }))} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">חזרה</button><button onClick={() => executeDeleteProfile('transfer_assets')} disabled={!deleteProfileState.targetProfileId} className="flex-1 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed">אשר העברה ומחיקה</button></div></>)}</div></div>)}
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} onStartTour={() => { setIsHelpOpen(false); }} />}
+      
     </div>
   );
 };

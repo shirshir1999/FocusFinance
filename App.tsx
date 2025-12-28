@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
+import BusinessDashboard from './components/BusinessDashboard'; 
 import AccountsTab from './components/AccountsTab';
 import PensionTab from './components/PensionTab';
 import InvestmentsTab from './components/InvestmentsTab';
 import RealEstateTab from './components/RealEstateTab';
 import LoansTab from './components/LoansTab';
 import CashFlowTab from './components/CashFlowTab';
-import GoalsTab from './components/GoalsTab'; // New Import
+import GoalsTab from './components/GoalsTab';
 import PensionCalculator from './components/PensionCalculator';
 import FutureProjection from './components/FutureProjection';
 import FeeCalculator from './components/FeeCalculator';
@@ -16,10 +17,11 @@ import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
 import TermsModal from './components/TermsModal';
-import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile } from './types';
-import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight } from 'lucide-react';
+// Sidebar removed
+import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile, ManagedClient } from './types';
+import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight, Briefcase } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
-import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys } from './services/supabase';
+import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys, fetchSharedPortfolios } from './services/supabase';
 
 // Define default layout order
 const DEFAULT_DASHBOARD_LAYOUT = [
@@ -35,7 +37,7 @@ const initialData: FinancialState = {
   investments: [],
   realEstate: [],
   loans: [],
-  goals: [], // Initialize Goals
+  goals: [], 
   cashFlow: {
       monthlyIncome: 0,
       additionalIncomes: [],
@@ -46,17 +48,28 @@ const initialData: FinancialState = {
       detailedExpenses: {}
   },
   dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
-  hiddenWidgets: []
+  hiddenWidgets: [],
+  managedClients: [], // New
+  authorizedEmails: [], // New
 };
 
 const DEFAULT_PROFILE_COLOR = '#3b82f6';
 const COLORS = ['#3b82f6', '#ec4899', '#8b5cf6', '#f59e0b', '#10b981'];
 
 const App: React.FC = () => {
+  // Navigation & View State
   const [activeView, setActiveView] = useState<TabId>('dashboard');
+  const [viewMode, setViewMode] = useState<'business_hub' | 'dashboard'>('dashboard'); // 'business_hub' shows client list
   const [viewParams, setViewParams] = useState<any>(null);
-  const [data, setData] = useState<FinancialState>(initialData);
+  
+  // Data State
+  const [data, setData] = useState<FinancialState>(initialData); // Holds the CURRENTLY VIEWED portfolio data
+  const [businessData, setBusinessData] = useState<FinancialState | null>(null); // Holds the ADVISOR's own data (client list)
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentPortfolioId, setCurrentPortfolioId] = useState<string>(''); // ID of the data row being viewed (User ID or Client UUID)
+  
+  const [sharedPortfolios, setSharedPortfolios] = useState<{id: string, name: string}[]>([]); // List of portfolios shared with me
+
   const [loading, setLoading] = useState(true);
   const mainScrollRef = useRef<HTMLDivElement>(null);
 
@@ -75,10 +88,7 @@ const App: React.FC = () => {
       targetProfileId?: string; 
   }>({ isOpen: false, profileId: null, step: 'confirm' });
 
-  // Help Modal State
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  
-  // Terms Modal State
   const [showTerms, setShowTerms] = useState(false);
 
   // Scroll to top when view changes
@@ -86,9 +96,9 @@ const App: React.FC = () => {
       if (mainScrollRef.current) {
           mainScrollRef.current.scrollTo(0, 0);
       }
-  }, [activeView]);
+  }, [activeView, viewMode]);
 
-  // Auth & Data Loading logic...
+  // Auth & Initial Load
   useEffect(() => {
     const initAuth = async () => {
         try {
@@ -110,71 +120,106 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Load Data Logic
+  const loadPortfolioData = async (portfolioId: string) => {
+      setLoading(true);
+      try {
+          const cloudData = await fetchUserData(portfolioId);
+          if (cloudData) {
+              // Ensure basic structure
+              if (!cloudData.profiles || cloudData.profiles.length === 0) {
+                   const name = 'פרופיל ראשי';
+                   cloudData.profiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
+                   const assignOwner = (items: any[]) => items.map(i => ({...i, ownerId: i.ownerId || 'main'}));
+                   cloudData.accounts = assignOwner(cloudData.accounts || []);
+                   cloudData.pensions = assignOwner(cloudData.pensions || []);
+                   cloudData.investments = assignOwner(cloudData.investments || []);
+                   cloudData.realEstate = assignOwner(cloudData.realEstate || []);
+                   cloudData.loans = assignOwner(cloudData.loans || []);
+                   cloudData.goals = assignOwner(cloudData.goals || []);
+              }
+              if (!cloudData.dashboardLayout) cloudData.dashboardLayout = DEFAULT_DASHBOARD_LAYOUT;
+              if (!cloudData.hiddenWidgets) cloudData.hiddenWidgets = [];
+              if (!cloudData.managedClients) cloudData.managedClients = [];
+              if (!cloudData.authorizedEmails) cloudData.authorizedEmails = [];
+
+              setData(cloudData);
+              setCurrentPortfolioId(portfolioId);
+
+              // Logic to handle Business Accounts vs Personal
+              if (cloudData.isBusinessAccount && portfolioId === currentUser?.id) {
+                  setBusinessData(cloudData); // Store advisor's data
+                  setViewMode('business_hub'); // Default to business hub
+              } else {
+                  // Normal user or Client View
+                  setViewMode('dashboard');
+              }
+
+              if (!cloudData.hasAcceptedTerms && portfolioId === currentUser?.id) {
+                  setShowTerms(true);
+              }
+              if (cloudData.profiles.length === 1) {
+                  setActiveProfileId(cloudData.profiles[0].id);
+              } else {
+                  setActiveProfileId('all');
+              }
+          } else {
+              // Create NEW data structure (Personal)
+              const name = currentUser?.user_metadata?.full_name || 'פרופיל ראשי';
+              const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
+              const newData = {
+                  ...initialData,
+                  profiles: newProfiles
+              };
+              setData(newData);
+              setCurrentPortfolioId(portfolioId);
+              
+              if (portfolioId === currentUser?.id) setShowTerms(true);
+              setActiveProfileId('main');
+          }
+      } catch (e) {
+          console.error("Error loading data", e);
+      } finally {
+          setLoading(false);
+      }
+  };
+
   useEffect(() => {
     if (currentUser) {
-      const load = async () => {
-        if(data === initialData) setLoading(true);
-        try {
-            const cloudData = await fetchUserData(currentUser.id);
-            if (cloudData) {
-                if (!cloudData.profiles || cloudData.profiles.length === 0) {
-                     const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
-                     cloudData.profiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
-                     const assignOwner = (items: any[]) => items.map(i => ({...i, ownerId: i.ownerId || 'main'}));
-                     cloudData.accounts = assignOwner(cloudData.accounts || []);
-                     cloudData.pensions = assignOwner(cloudData.pensions || []);
-                     cloudData.investments = assignOwner(cloudData.investments || []);
-                     cloudData.realEstate = assignOwner(cloudData.realEstate || []);
-                     cloudData.loans = assignOwner(cloudData.loans || []);
-                     cloudData.goals = assignOwner(cloudData.goals || []);
-                }
-                // Ensure goals array exists for migration
-                if (!cloudData.goals) cloudData.goals = [];
-                
-                // Initialize new layout fields if missing
-                if (!cloudData.dashboardLayout) cloudData.dashboardLayout = DEFAULT_DASHBOARD_LAYOUT;
-                if (!cloudData.hiddenWidgets) cloudData.hiddenWidgets = [];
-
-                setData(cloudData);
-                if (!cloudData.hasAcceptedTerms) {
-                    setShowTerms(true);
-                }
-                if (cloudData.profiles.length === 1) {
-                    setActiveProfileId(cloudData.profiles[0].id);
-                }
-            } else {
-                const name = currentUser.user_metadata?.full_name || 'פרופיל ראשי';
-                const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
-                setData({
-                    ...initialData,
-                    profiles: newProfiles
-                });
-                setActiveProfileId('main');
-                setShowTerms(true); 
-            }
-        } catch (e) {
-            console.error("Error loading data", e);
-        } finally {
-            setLoading(false);
-        }
-      };
-      load();
+        // Initial load: Load logged-in user's data
+        loadPortfolioData(currentUser.id);
+        
+        // Check for shared portfolios
+        fetchSharedPortfolios(currentUser.email).then(shared => {
+            // Filter out own portfolio if it appears
+            const others = shared.filter((s: any) => s.id !== currentUser.id);
+            setSharedPortfolios(others);
+        });
     }
   }, [currentUser]);
 
+  // Save Data
   useEffect(() => {
-    if (currentUser && data !== initialData) {
-      saveUserData(currentUser.id, data);
+    if (currentPortfolioId && data !== initialData) {
+      saveUserData(currentPortfolioId, data);
+      
+      // If we are editing the Business User's own data (e.g. added a client), update businessData state too
+      if (currentPortfolioId === currentUser?.id && data.isBusinessAccount) {
+          setBusinessData(data);
+      }
     }
-  }, [data, currentUser]);
+  }, [data, currentPortfolioId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
     setData(initialData);
+    setBusinessData(null);
+    setSharedPortfolios([]);
     setActiveView('dashboard');
     setActiveProfileId('all');
     setShowTerms(false);
+    setViewMode('dashboard');
   };
 
   const handleAcceptTerms = () => {
@@ -182,6 +227,101 @@ const App: React.FC = () => {
       setShowTerms(false);
       setIsHelpOpen(true);
   };
+
+  // --- Business / Consultant Logic ---
+
+  const toggleBusinessAccount = () => {
+      setData(prev => ({ ...prev, isBusinessAccount: !prev.isBusinessAccount }));
+      // If turning ON, switch to hub. If OFF, standard dashboard.
+      if (!data.isBusinessAccount) setViewMode('business_hub');
+      else setViewMode('dashboard');
+      setIsProfileMenuOpen(false);
+  };
+
+  const handleAddClient = (name: string, email: string) => {
+      if (!businessData) return;
+      
+      const newClientId = `client_${Date.now()}`;
+      const newClient: ManagedClient = {
+          id: newClientId,
+          name: name,
+          email: email,
+          lastAccess: new Date().toISOString()
+      };
+
+      // 1. Update Advisor's list
+      const updatedBusinessData = {
+          ...businessData,
+          managedClients: [...(businessData.managedClients || []), newClient]
+      };
+      setBusinessData(updatedBusinessData); // Update local store
+      setData(updatedBusinessData); // Trigger save to DB (since currentPortfolioId is Advisor)
+
+      // 2. Initialize Client's Data in DB
+      const newClientData: FinancialState = {
+          ...initialData,
+          authorizedEmails: email ? [email, currentUser.email] : [currentUser.email],
+          profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
+      };
+      
+      // Save the NEW client row
+      saveUserData(newClientId, newClientData);
+  };
+
+  const handleSelectClient = (clientId: string) => {
+      // Switch view context to this client
+      loadPortfolioData(clientId);
+  };
+
+  const handleBackToBusiness = () => {
+      if (currentUser && businessData) {
+          // Reload advisor data
+          setData(businessData);
+          setCurrentPortfolioId(currentUser.id);
+          setViewMode('business_hub');
+      } else {
+          // Fallback
+          loadPortfolioData(currentUser?.id);
+      }
+  };
+
+  const handleSwitchToShared = (portfolioId: string) => {
+      loadPortfolioData(portfolioId);
+      setIsProfileMenuOpen(false);
+  };
+
+  const handleBackToPersonal = () => {
+      loadPortfolioData(currentUser.id);
+      setIsProfileMenuOpen(false);
+  };
+
+  const handleShareClientAccess = (clientId: string, email: string) => {
+      // 1. Update Advisor's record of the email
+      if (businessData) {
+          const updatedClients = businessData.managedClients?.map(c => 
+              c.id === clientId ? { ...c, email: email } : c
+          );
+          const updatedAdvisorData = { ...businessData, managedClients: updatedClients };
+          setBusinessData(updatedAdvisorData);
+          setData(updatedAdvisorData); // Trigger save for advisor
+      }
+
+      // 2. Update Client's Data permissions
+      fetchUserData(clientId).then(clientData => {
+          if (clientData) {
+              const currentEmails = clientData.authorizedEmails || [];
+              if (!currentEmails.includes(email)) {
+                  const updatedClientData = { 
+                      ...clientData, 
+                      authorizedEmails: [...currentEmails, email] 
+                  };
+                  saveUserData(clientId, updatedClientData);
+              }
+          }
+      });
+  };
+
+  // --- End Business Logic ---
 
   const updateData = (key: keyof FinancialState, items: any) => {
     setData(prev => ({ ...prev, [key]: items }));
@@ -228,12 +368,7 @@ const App: React.FC = () => {
       setData(prev => ({ ...prev, dashboardLayout: newLayout, hiddenWidgets: hidden }));
   };
 
-  const navigateTo = (view: TabId, params?: any) => {
-      setActiveView(view);
-      setViewParams(params || null);
-  };
-
-  // Profile functions...
+  // Profile Management
   const handleAddProfile = () => {
       if (!newNameInput.trim()) return;
       const newId = Date.now().toString();
@@ -243,7 +378,7 @@ const App: React.FC = () => {
       setActiveProfileId(newId);
       setIsAddProfileOpen(false);
       setNewNameInput('');
-      navigateTo('dashboard');
+      setActiveView('dashboard');
   };
 
   const handleEditName = () => {
@@ -290,7 +425,30 @@ const App: React.FC = () => {
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-900"><Loader2 className="animate-spin text-emerald-500 w-12 h-12" /></div>;
   if (!currentUser) return <div className="flex flex-col min-h-screen"><AuthScreen onLogin={(user) => setCurrentUser(user)} />{hasMissingKeys && <button onClick={clearCustomKeys} className="fixed bottom-4 left-4 p-2 text-slate-300 hover:text-slate-500 transition"><div className="w-4 h-4 rounded-full border border-current"></div></button>}</div>;
 
+  const activeProfile = data.profiles?.find(p => p.id === activeProfileId);
+  const isBusinessView = currentPortfolioId !== currentUser.id;
+  const viewingShared = isBusinessView && !businessData; // I'm a client viewing a shared portfolio
+
+  // Calculate Header Badge
+  const dashboardBadgeText = isBusinessView 
+    ? (viewingShared ? `${data.profiles?.[0]?.name || 'לקוח'} - ליווי פיננסי` : 'צפייה בתיק לקוח') 
+    : null;
+
+  // --- RENDER CONTENT ---
   const renderContent = () => {
+    // If Business Mode and at the Hub
+    if (viewMode === 'business_hub') {
+        return (
+            <BusinessDashboard 
+                clients={data.managedClients || []}
+                onSelectClient={handleSelectClient}
+                onAddClient={handleAddClient}
+                onShareClient={handleShareClientAccess}
+            />
+        );
+    }
+
+    // Standard Dashboard View (User or Client Impersonation)
     const commonModalProps = { profiles: data.profiles || [], activeProfileId: activeProfileId };
     const renderWithModal = (ModalComponent: React.FC<any>, props: any = {}) => (
         <>
@@ -303,14 +461,15 @@ const App: React.FC = () => {
                     realEstate: getFilteredItems(data.realEstate),
                     loans: getFilteredItems(data.loans)
                 }} 
-                onNavigate={navigateTo} 
+                onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }}
                 userName={getMainUserName()} 
                 onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} 
                 activeProfileId={activeProfileId} 
                 profiles={data.profiles || []}
                 onUpdateLayout={handleUpdateDashboardLayout}
+                headerBadge={dashboardBadgeText} // Passed to Dashboard
             />
-            <ModalComponent {...props} {...commonModalProps} onClose={() => navigateTo('dashboard')} />
+            <ModalComponent {...props} {...commonModalProps} onClose={() => { setActiveView('dashboard'); setViewParams(null); }} />
         </>
     );
 
@@ -324,7 +483,11 @@ const App: React.FC = () => {
          return renderWithModal(FeeCalculator, { initialFees });
     }
 
-    const tabProps = { profiles: data.profiles || [], activeProfileId: activeProfileId, onBack: () => navigateTo('dashboard') };
+    const tabProps = { 
+        profiles: data.profiles || [], 
+        activeProfileId: activeProfileId, 
+        onBack: () => { setActiveView('dashboard'); setViewParams(null); } 
+    };
 
     switch (activeView) {
       case 'dashboard':
@@ -337,12 +500,13 @@ const App: React.FC = () => {
                 realEstate: getFilteredItems(data.realEstate),
                 loans: getFilteredItems(data.loans)
             }} 
-            onNavigate={navigateTo} 
+            onNavigate={(view, params) => { setActiveView(view); setViewParams(params || null); }}
             userName={getMainUserName()} 
             onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} 
             activeProfileId={activeProfileId} 
             profiles={data.profiles || []}
             onUpdateLayout={handleUpdateDashboardLayout}
+            headerBadge={dashboardBadgeText} // Passed to Dashboard
         />;
       case 'accounts': return <AccountsTab items={getFilteredItems(data.accounts)} onAdd={(item) => updateData('accounts', [...data.accounts, assignOwner(item)])} onRemove={(id) => updateData('accounts', data.accounts.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('accounts', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('accounts', id, item)} {...tabProps} />;
       case 'pension': return <PensionTab items={getFilteredItems(data.pensions)} initialType={viewParams?.type} onAdd={(item) => updateData('pensions', [...data.pensions, assignOwner(item)])} onRemove={(id) => updateData('pensions', data.pensions.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('pensions', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('pensions', id, item)} {...tabProps} />;
@@ -350,79 +514,158 @@ const App: React.FC = () => {
       case 'realestate': return <RealEstateTab items={getFilteredItems(data.realEstate)} onAdd={(item) => updateData('realEstate', [...data.realEstate, assignOwner(item)])} onRemove={(id) => updateData('realEstate', data.realEstate.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('realEstate', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('realEstate', id, item)} {...tabProps} />;
       case 'loans': return <LoansTab items={getFilteredItems(data.loans)} onAdd={(item) => updateData('loans', [...data.loans, assignOwner(item)])} onRemove={(id) => updateData('loans', data.loans.filter(i => i.id !== id))} onUpdate={(id, val, hist) => handleUpdateValue('loans', id, val, hist)} onUpdateDetails={(id, item) => handleUpdateDetails('loans', id, item)} {...tabProps} />;
       case 'goals': 
-        // Pass all assets to GoalsTab for linking functionality
-        const allAssets = [
-            ...(data.accounts ? getFilteredItems(data.accounts) : []),
-            ...(data.pensions ? getFilteredItems(data.pensions) : []),
-            ...(data.investments ? getFilteredItems(data.investments) : []),
-            ...(data.realEstate ? getFilteredItems(data.realEstate) : [])
-        ];
+        const allAssets = [...(data.accounts||[]), ...(data.pensions||[]), ...(data.investments||[]), ...(data.realEstate||[])];
         return <GoalsTab 
             items={getFilteredItems(data.goals)} 
             availableAssets={allAssets}
             onAdd={(item) => updateData('goals', [...data.goals, assignOwner(item)])} 
             onRemove={(id) => updateData('goals', data.goals.filter(i => i.id !== id))} 
-            onUpdate={(id, item) => {
-                 const updated = data.goals.map(g => g.id === id ? item : g);
-                 updateData('goals', updated);
-            }} 
+            onUpdate={(id, item) => { const updated = data.goals.map(g => g.id === id ? item : g); updateData('goals', updated); }} 
             {...tabProps} 
         />;
-      case 'cashflow': return <CashFlowTab data={data.cashFlow || initialData.cashFlow!} loans={getFilteredItems(data.loans)} realEstate={getFilteredItems(data.realEstate)} onUpdate={handleUpdateCashFlow} onBack={() => navigateTo('dashboard')} />;
-      default: return <Dashboard data={data} onNavigate={navigateTo} userName={getMainUserName()} onEditName={() => { setNewNameInput(getMainUserName() || ''); setIsEditNameOpen(true); }} activeProfileId={activeProfileId} profiles={data.profiles || []} />;
+      case 'cashflow': return <CashFlowTab data={data.cashFlow || initialData.cashFlow!} loans={getFilteredItems(data.loans)} realEstate={getFilteredItems(data.realEstate)} onUpdate={handleUpdateCashFlow} onBack={() => { setActiveView('dashboard'); setViewParams(null); }} />;
+      default: return null;
     }
   };
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans overflow-hidden">
-      <header className="bg-white border-b border-slate-200 z-30 shadow-sm flex-shrink-0">
-          <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-2 md:gap-3 cursor-pointer min-w-0" onClick={() => navigateTo('dashboard')}>
-                  <TreeLogo className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0" />
-                  <div className="min-w-0 flex flex-col justify-center">
-                      <h1 className="text-lg md:text-xl font-black text-slate-900 leading-none tracking-tight truncate">פוקוס פיננסי</h1>
-                      <span className="text-[10px] md:text-xs text-slate-500 font-medium truncate hidden sm:block">שיר כהן - תכנון פיננסי</span>
+      
+      <div className="flex-1 flex flex-col overflow-hidden w-full relative">
+          <header className="bg-white border-b border-slate-200 z-30 shadow-sm flex-shrink-0">
+              <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                  
+                  {/* Logo Area */}
+                  <div className="flex items-center gap-2 md:gap-3 cursor-pointer min-w-0 ml-auto lg:ml-0" onClick={() => { if(viewMode !== 'business_hub') setActiveView('dashboard'); }}>
+                      <TreeLogo className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0" />
+                      <div className="min-w-0 flex flex-col justify-center">
+                          <h1 className="text-lg md:text-xl font-black text-slate-900 leading-none tracking-tight truncate">פוקוס פיננסי</h1>
+                          {/* Restored Subtitle */}
+                          <span className="text-[10px] md:text-xs text-slate-500 font-medium truncate hidden sm:block">שיר כהן - תכנון פיננסי</span>
+                          {/* Removed Badges from here as requested */}
+                      </div>
                   </div>
-              </div>
-              <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                  <a href="https://www.shirfinance.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-emerald-600 transition"><span className="hidden sm:inline">לאתר שלי</span><ExternalLink size={16} /></a>
-                  <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
-                  <button onClick={() => setIsHelpOpen(true)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-full transition" title="עזרה ומידע"><Info size={20} /></button>
-                  <div className="relative">
-                      <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-700 text-sm font-bold hover:bg-slate-200 transition">
-                         {((data.profiles?.length || 0) > 1) && activeProfileId === 'all' && (<div className="flex items-center gap-2"><div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div><span className="hidden sm:inline">מבט כולל</span></div>)}
-                         {(activeProfileId !== 'all' || (data.profiles?.length || 0) <= 1) && (<div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: data.profiles?.find(p => p.id === activeProfileId)?.color || DEFAULT_PROFILE_COLOR }}>{data.profiles?.find(p => p.id === activeProfileId)?.name[0] || 'U'}</div><span className="hidden sm:inline">{data.profiles?.find(p => p.id === activeProfileId)?.name || 'משתמש'}</span></div>)}
-                         <ChevronDown size={14} className="text-slate-400"/>
-                      </button>
-                      {isProfileMenuOpen && (
-                          <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50">
-                              {(data.profiles?.length || 0) > 1 && (<><button onClick={() => { setActiveProfileId('all'); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-sm font-medium flex items-center gap-2"><div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div>מבט משפחתי כולל</button><div className="my-1 border-t border-slate-100"></div>{data.profiles?.map(p => (<div key={p.id} className="flex items-center justify-between px-2 hover:bg-slate-50 group"><button onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }} className="flex-1 text-right px-2 py-2 text-sm font-medium flex items-center gap-2"><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>{p.name[0]}</div>{p.name}</button>{!p.isMainUser && (<button onClick={(e) => handleProfileDeleteInit(e, p.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100" title="מחיקת פרופיל"><Trash2 size={14}/></button>)}</div>))}<div className="my-1 border-t border-slate-100"></div></>)}
-                              <button onClick={() => { setIsAddProfileOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-600 text-sm font-bold flex items-center gap-2"><Plus size={14}/>הוסף פרופיל</button>
-                              <div className="my-1 border-t border-slate-100"></div>
-                              <button onClick={() => { setIsProfileMenuOpen(false); handleLogout(); }} className="w-full text-right px-4 py-2 hover:bg-red-50 text-red-600 text-sm font-medium flex items-center gap-2"><LogOut size={14}/>התנתקות</button>
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-      </header>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col" ref={mainScrollRef}>
-          <main className="flex-1">{renderContent()}</main>
-          <footer className="mt-auto border-t border-slate-200 bg-slate-50 py-4 px-4 text-slate-500 flex-shrink-0">
-              <div className="max-w-4xl mx-auto text-center space-y-2">
-                  <div className="flex items-center justify-center gap-1.5 text-slate-900 mb-1"><AlertTriangle size={14} /><span className="text-[10px] font-bold uppercase tracking-wider">הבהרה משפטית</span></div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed max-w-2xl mx-auto">המידע המוצג במערכת זו נועד למטרות מעקב וניהול אישי בלבד. המידע אינו מהווה ייעוץ השקעות, ייעוץ פנסיוני, ייעוץ מס או תחליף לייעוץ מקצועי.</p>
-                  <div className="pt-2 mt-2 border-t border-slate-200/60"><p className="text-[10px] font-medium text-slate-400">© {new Date().getFullYear()} שיר כהן תכנון פיננסי - כל הזכויות שמורות</p></div>
+                  {/* Left Controls */}
+                  <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                      
+                      {/* Restored Website Link */}
+                      <a 
+                        href="https://www.shirfinance.com/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-emerald-600 transition"
+                      >
+                          <span className="hidden sm:inline">לאתר שלי</span>
+                          <ExternalLink size={16} />
+                      </a>
+
+                      <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
+
+                      {/* Business Mode Back Button */}
+                      {isBusinessView && viewMode !== 'business_hub' && !viewingShared && (
+                          <button 
+                            onClick={handleBackToBusiness}
+                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition"
+                          >
+                              <ArrowRight size={14} />
+                              <span className="hidden sm:inline">חזרה ללקוחות</span>
+                          </button>
+                      )}
+
+                      <button onClick={() => setIsHelpOpen(true)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-full transition" title="עזרה ומידע"><Info size={20} /></button>
+                      
+                      <div className="relative">
+                          <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold transition ${isBusinessView ? 'bg-emerald-600 text-white shadow-emerald-200 shadow-lg' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
+                             {isBusinessView ? (
+                                <div className="flex items-center gap-2"><Briefcase size={14}/><span>{data.profiles?.[0]?.name || 'לקוח'}</span></div>
+                             ) : (
+                                <div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: activeProfile?.color || DEFAULT_PROFILE_COLOR }}>{activeProfile?.name[0] || 'U'}</div><span className="hidden sm:inline">{activeProfile?.name || 'משתמש'}</span></div>
+                             )}
+                             <ChevronDown size={14} className={isBusinessView ? "text-white" : "text-slate-400"}/>
+                          </button>
+                          
+                          {isProfileMenuOpen && (
+                              <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in">
+                                  {!isBusinessView && data.profiles?.length > 1 && (
+                                      <>
+                                        <button onClick={() => { setActiveProfileId('all'); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-sm font-medium flex items-center gap-2"><div className="bg-slate-800 text-white p-1 rounded-full"><Users size={12}/></div>מבט משפחתי כולל</button>
+                                        <div className="my-1 border-t border-slate-100"></div>
+                                        {data.profiles?.map(p => (<div key={p.id} className="flex items-center justify-between px-2 hover:bg-slate-50 group"><button onClick={() => { setActiveProfileId(p.id); setIsProfileMenuOpen(false); }} className="flex-1 text-right px-2 py-2 text-sm font-medium flex items-center gap-2"><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white" style={{ backgroundColor: p.color }}>{p.name[0]}</div>{p.name}</button>{!p.isMainUser && (<button onClick={(e) => handleProfileDeleteInit(e, p.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100" title="מחיקת פרופיל"><Trash2 size={14}/></button>)}</div>))}
+                                        <div className="my-1 border-t border-slate-100"></div>
+                                      </>
+                                  )}
+                                  
+                                  {/* SHARED PORTFOLIOS (CLIENT VIEW) */}
+                                  {!isBusinessView && sharedPortfolios.length > 0 && (
+                                      <>
+                                        <div className="px-4 py-1.5 text-xs text-slate-400 font-bold">תיקים משותפים</div>
+                                        {sharedPortfolios.map(p => (
+                                            <button 
+                                                key={p.id} 
+                                                onClick={() => handleSwitchToShared(p.id)}
+                                                className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-700 text-sm font-medium flex items-center gap-2"
+                                            >
+                                                <Briefcase size={14}/>
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                        <div className="my-1 border-t border-slate-100"></div>
+                                      </>
+                                  )}
+
+                                  {/* RETURN TO PERSONAL */}
+                                  {viewingShared && (
+                                      <>
+                                        <button 
+                                            onClick={handleBackToPersonal}
+                                            className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-700 text-sm font-bold flex items-center gap-2"
+                                        >
+                                            <ArrowRight size={14}/>
+                                            חזור לתיק אישי
+                                        </button>
+                                        <div className="my-1 border-t border-slate-100"></div>
+                                      </>
+                                  )}
+
+                                  {!isBusinessView && !viewingShared && (
+                                      <button onClick={() => { setIsAddProfileOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-emerald-50 text-emerald-600 text-sm font-bold flex items-center gap-2"><Plus size={14}/>הוסף פרופיל</button>
+                                  )}
+
+                                  {/* Business Toggle - Moved down */}
+                                  {!viewingShared && (
+                                      <button onClick={toggleBusinessAccount} className="w-full text-right px-4 py-2 hover:bg-indigo-50 text-indigo-700 text-sm font-bold flex items-center gap-2">
+                                          <Briefcase size={14}/>
+                                          {data.isBusinessAccount ? (viewMode === 'business_hub' ? 'מעבר לדאשבורד אישי' : 'חזרה לפורטל יועצים') : 'עבור לפורטל העסקי'}
+                                      </button>
+                                  )}
+                                  
+                                  <div className="my-1 border-t border-slate-100"></div>
+                                  <button onClick={() => { setIsProfileMenuOpen(false); handleLogout(); }} className="w-full text-right px-4 py-2 hover:bg-red-50 text-red-600 text-sm font-medium flex items-center gap-2"><LogOut size={14}/>התנתקות</button>
+                              </div>
+                          )}
+                      </div>
+                  </div>
               </div>
-          </footer>
+          </header>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col" ref={mainScrollRef}>
+              <main className="flex-1">{renderContent()}</main>
+              <footer className="mt-auto border-t border-slate-200 bg-slate-50 py-4 px-4 text-slate-500 flex-shrink-0">
+                  <div className="max-w-4xl mx-auto text-center space-y-2">
+                      <div className="flex items-center justify-center gap-1.5 text-slate-900 mb-1"><AlertTriangle size={14} /><span className="text-[10px] font-bold uppercase tracking-wider">הבהרה משפטית</span></div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed max-w-2xl mx-auto">המידע המוצג במערכת זו נועד למטרות מעקב וניהול אישי בלבד. המידע אינו מהווה ייעוץ השקעות, ייעוץ פנסיוני, ייעוץ מס או תחליף לייעוץ מקצועי.</p>
+                      <div className="pt-2 mt-2 border-t border-slate-200/60"><p className="text-[10px] font-medium text-slate-400">© {new Date().getFullYear()} שיר כהן תכנון פיננסי - כל הזכויות שמורות</p></div>
+                  </div>
+              </footer>
+          </div>
       </div>
 
       {currentUser && showTerms && <TermsModal onAccept={handleAcceptTerms} />}
       {isEditNameOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="הכנס שם מלא" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsEditNameOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleEditName} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold">שמור</button></div></div></div>)}
       {isAddProfileOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddProfileOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-600"><Users size={24} /></div><h3 className="text-lg font-bold text-slate-800 mb-2">הוספת פרופיל חדש</h3><p className="text-sm text-slate-500 mb-4">הוסיפו פרופיל עבור בן/בת זוג או ילד לניהול נפרד או משותף.</p><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="שם הפרופיל (לדוגמה: בן)" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsAddProfileOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleAddProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition">הוסף פרופיל</button></div></div></div>)}
       {deleteProfileState.isOpen && (<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })}><div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}><div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500"><Trash2 size={32} /></div><h3 className="font-black text-2xl text-slate-800 mb-2 text-center">מחיקת פרופיל</h3>{deleteProfileState.step === 'confirm' ? (<><p className="text-slate-500 mb-8 leading-relaxed text-center">אתם עומדים למחוק את הפרופיל. מה תרצו לעשות עם הנכסים המשויכים אליו?</p><div className="space-y-3">{(data.profiles && data.profiles.length > 1) && (<button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'action' }))} className="w-full p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between group transition"><span className="font-bold text-slate-700">העברת נכסים למשתמש אחר</span><ArrowRight size={20} className="text-slate-400 group-hover:text-slate-600"/></button>)}<button onClick={() => executeDeleteProfile('delete_assets')} className="w-full p-4 bg-red-50 hover:bg-red-100 border border-red-100 text-red-700 rounded-xl font-bold transition flex items-center justify-center gap-2"><Trash2 size={18}/>מחיקת הפרופיל והנכסים שלו</button><button onClick={() => setDeleteProfileState({ isOpen: false, profileId: null, step: 'confirm' })} className="w-full p-3 text-slate-400 hover:text-slate-600 text-sm font-medium mt-2">ביטול</button></div></>) : (<><p className="text-slate-500 mb-6 leading-relaxed text-center">לאיזה משתמש תרצו להעביר את הנכסים?</p><div className="space-y-2 mb-6 max-h-48 overflow-y-auto custom-scrollbar">{data.profiles?.filter(p => p.id !== deleteProfileState.profileId).map(p => (<button key={p.id} onClick={() => setDeleteProfileState(prev => ({ ...prev, targetProfileId: p.id }))} className={`w-full p-3 rounded-xl flex items-center gap-3 border transition ${deleteProfileState.targetProfileId === p.id ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-slate-200 hover:bg-slate-50'}`}><div className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shrink-0" style={{ backgroundColor: p.color }}>{p.name[0]}</div><span className="font-bold text-slate-700">{p.name}</span></button>))}</div><div className="flex gap-3"><button onClick={() => setDeleteProfileState(prev => ({ ...prev, step: 'confirm', targetProfileId: undefined }))} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">חזרה</button><button onClick={() => executeDeleteProfile('transfer_assets')} disabled={!deleteProfileState.targetProfileId} className="flex-1 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed">אשר העברה ומחיקה</button></div></>)}</div></div>)}
-      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} onStartTour={() => { setIsHelpOpen(false); /* Start Tour logic if implemented */ }} />}
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} onStartTour={() => { setIsHelpOpen(false); }} />}
       
     </div>
   );

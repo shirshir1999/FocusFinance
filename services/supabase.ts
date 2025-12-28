@@ -89,7 +89,10 @@ if (!hasMissingKeys) {
   supabaseClient = {
       auth: mockAuth,
       from: () => ({
-          select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: "Mock Mode" } }) }) }),
+          select: () => ({ 
+              eq: () => ({ single: async () => ({ data: null, error: { message: "Mock Mode" } }) }),
+              contains: () => ({ data: [], error: null }) // Mock contains response
+          }),
           upsert: async () => ({ error: null })
       })
   };
@@ -131,4 +134,47 @@ export const fetchUserData = async (userId: string) => {
     return null;
   }
   return data?.financial_json || null;
+};
+
+// Fetch portfolios shared WITH this email
+export const fetchSharedPortfolios = async (email: string) => {
+    if (hasMissingKeys) {
+        // Mock: Scan all local storage keys starting with mock_data_
+        const shared = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('mock_data_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+                    if (data.authorizedEmails && Array.isArray(data.authorizedEmails) && data.authorizedEmails.includes(email)) {
+                        // Avoid adding own portfolio if fetched by mistake
+                        shared.push({
+                            id: key.replace('mock_data_', ''),
+                            name: data.profiles?.[0]?.name || 'תיק משותף',
+                            ownerName: 'יועץ/שותף' // Simplified for mock
+                        });
+                    }
+                } catch(e) {}
+            }
+        }
+        return shared;
+    }
+
+    // Real Supabase Query
+    // Note: This requires RLS policy to allow SELECT if email is in authorizedEmails column or json
+    const { data, error } = await supabase
+        .from('user_data')
+        .select('id, financial_json')
+        .contains('financial_json', { authorizedEmails: [email] });
+
+    if (error) {
+        console.error('Error fetching shared portfolios:', error);
+        return [];
+    }
+
+    return data.map((row: any) => ({
+        id: row.id,
+        name: row.financial_json?.profiles?.[0]?.name || 'תיק משותף',
+        ownerName: 'יועץ/שותף'
+    }));
 };
