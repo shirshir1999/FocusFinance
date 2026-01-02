@@ -185,8 +185,6 @@ const App: React.FC = () => {
               }
           } else {
               // Create NEW data structure (Personal)
-              // Only reached if fetching failed AND user wants to create new.
-              // Logic moved to initUser to prefer shared portfolios.
               const name = currentUser?.user_metadata?.full_name || 'פרופיל ראשי';
               const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
               const newData = {
@@ -217,39 +215,42 @@ const App: React.FC = () => {
                 // Ensure email is lowercase for comparison
                 const email = currentUser.email?.toLowerCase().trim();
                 
-                // 1. Check if I am authorized on any shared portfolios
+                // 1. STRATEGY A: Check for DIRECT email-based portfolio ID (The Advisor created this for me)
+                const directPortfolioId = `portfolio_${email}`;
+                const directData = await fetchUserData(directPortfolioId);
+
+                // 2. STRATEGY B: Check for shared portfolios (Old logic or multi-share)
                 const shared = await fetchSharedPortfolios(email);
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
-                // PRIORITY: If I have a shared portfolio (likely created by advisor), LOAD IT FIRST.
-                // Do not create a new empty user row if a shared row exists.
-                if (others.length > 0) {
-                    const primaryShared = others[0].id; // The Advisor-created portfolio ID
-                    // Check persistence if user was navigating elsewhere, but default to shared on first load
-                    const lastViewed = localStorage.getItem('lastViewedPortfolio');
-                    
-                    if (lastViewed && (lastViewed === primaryShared || lastViewed === currentUser.id)) {
-                         // Respect last view if valid, but map my-id to shared-id if empty?
-                         // Simplest: If lastViewed is my ID, check if it exists. If not, switch to shared.
-                         const myDataExists = await fetchUserData(currentUser.id);
-                         if (lastViewed === currentUser.id && !myDataExists) {
-                             await loadPortfolioData(primaryShared);
-                         } else {
-                             await loadPortfolioData(lastViewed);
-                         }
-                    } else {
-                        // First time or no persistence -> Load shared
-                        await loadPortfolioData(primaryShared);
-                    }
-                } else {
-                    // I am a REGULAR USER or ADVISOR with no shared files aimed at me.
-                    // Load my own portfolio.
-                    await loadPortfolioData(currentUser.id);
-                    
-                    const lastMode = localStorage.getItem('lastViewMode');
-                    if (lastMode === 'business_hub') setViewMode('business_hub');
+                // PRIORITY 1: Direct Portfolio Match (portfolio_client@gmail.com)
+                if (directData) {
+                    await loadPortfolioData(directPortfolioId);
+                    return;
                 }
+
+                // PRIORITY 2: Shared Portfolios found via Query
+                if (others.length > 0) {
+                    await loadPortfolioData(others[0].id);
+                    return;
+                }
+
+                // PRIORITY 3: Sticky Session (User was here before)
+                const lastViewed = localStorage.getItem('lastViewedPortfolio');
+                if (lastViewed && lastViewed !== currentUser.id) {
+                     const canAccess = await fetchUserData(lastViewed); // Simple check
+                     if (canAccess) {
+                         await loadPortfolioData(lastViewed);
+                         return;
+                     }
+                }
+
+                // PRIORITY 4: Fallback to Personal User ID
+                await loadPortfolioData(currentUser.id);
+                const lastMode = localStorage.getItem('lastViewMode');
+                if (lastMode === 'business_hub') setViewMode('business_hub');
+
             } catch (e) {
                 console.error("Error initializing user", e);
                 // Fallback
@@ -321,8 +322,9 @@ const App: React.FC = () => {
   const handleAddClient = async (name: string, email: string) => {
       if (!businessData) return;
       
-      const newClientId = `client_${Date.now()}`;
       const emailClean = email ? email.toLowerCase().trim() : '';
+      // Deterministic ID based on email if available, otherwise timestamp
+      const newClientId = emailClean ? `portfolio_${emailClean}` : `client_${Date.now()}`;
       const advisorEmail = currentUser.email?.toLowerCase().trim();
       
       const newClient: ManagedClient = {
@@ -352,7 +354,7 @@ const App: React.FC = () => {
           profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
       };
       
-      // Save the NEW client row IMMEDIATELY
+      // Save the NEW client row IMMEDIATELY with the DETERMINISTIC ID
       await saveUserData(newClientId, newClientData);
   };
 
