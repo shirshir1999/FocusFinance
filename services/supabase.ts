@@ -93,7 +93,8 @@ if (!hasMissingKeys) {
               eq: () => ({ single: async () => ({ data: null, error: { message: "Mock Mode" } }) }),
               contains: () => ({ data: [], error: null }) // Mock contains response
           }),
-          upsert: async () => ({ error: null })
+          upsert: async () => ({ error: null }),
+          delete: () => ({ eq: async () => ({ error: null }) })
       })
   };
 }
@@ -136,8 +137,26 @@ export const fetchUserData = async (userId: string) => {
   return data?.financial_json || null;
 };
 
+// Delete user data (for deleting clients)
+export const deleteUserData = async (userId: string) => {
+    if (hasMissingKeys) {
+        localStorage.removeItem(`mock_data_${userId}`);
+        return;
+    }
+
+    const { error } = await supabase
+        .from('user_data')
+        .delete()
+        .eq('id', userId);
+
+    if (error) console.error('Error deleting user data:', error);
+};
+
 // Fetch portfolios shared WITH this email
 export const fetchSharedPortfolios = async (email: string) => {
+    // Normalize email for check
+    const normalizedEmail = email.toLowerCase().trim();
+
     if (hasMissingKeys) {
         // Mock: Scan all local storage keys starting with mock_data_
         const shared = [];
@@ -146,7 +165,7 @@ export const fetchSharedPortfolios = async (email: string) => {
             if (key?.startsWith('mock_data_')) {
                 try {
                     const data = JSON.parse(localStorage.getItem(key) || '{}');
-                    if (data.authorizedEmails && Array.isArray(data.authorizedEmails) && data.authorizedEmails.includes(email)) {
+                    if (data.authorizedEmails && Array.isArray(data.authorizedEmails) && data.authorizedEmails.includes(normalizedEmail)) {
                         // Avoid adding own portfolio if fetched by mistake
                         shared.push({
                             id: key.replace('mock_data_', ''),
@@ -165,7 +184,7 @@ export const fetchSharedPortfolios = async (email: string) => {
     const { data, error } = await supabase
         .from('user_data')
         .select('id, financial_json')
-        .contains('financial_json', { authorizedEmails: [email] });
+        .contains('financial_json', { authorizedEmails: [normalizedEmail] });
 
     if (error) {
         console.error('Error fetching shared portfolios:', error);

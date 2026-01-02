@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import BusinessDashboard from './components/BusinessDashboard'; 
@@ -20,7 +21,7 @@ import TermsModal from './components/TermsModal';
 import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile, ManagedClient } from './types';
 import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight, Briefcase } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
-import { supabase, saveUserData, fetchUserData, hasMissingKeys, clearCustomKeys, fetchSharedPortfolios } from './services/supabase';
+import { supabase, saveUserData, fetchUserData, deleteUserData, hasMissingKeys, clearCustomKeys, fetchSharedPortfolios } from './services/supabase';
 
 // Define default layout order
 const DEFAULT_DASHBOARD_LAYOUT = [
@@ -190,12 +191,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-        // --- UPDATED LOGIC: Check for shared portfolios FIRST ---
         const initUser = async () => {
             setLoading(true);
             try {
+                // Ensure email is lowercase for comparison
+                const email = currentUser.email?.toLowerCase().trim();
+                
                 // 1. Check if I am authorized on any shared portfolios
-                const shared = await fetchSharedPortfolios(currentUser.email);
+                const shared = await fetchSharedPortfolios(email);
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
@@ -262,10 +265,12 @@ const App: React.FC = () => {
       if (!businessData) return;
       
       const newClientId = `client_${Date.now()}`;
+      const emailClean = email ? email.toLowerCase().trim() : '';
+      
       const newClient: ManagedClient = {
           id: newClientId,
           name: name,
-          email: email,
+          email: emailClean,
           lastAccess: new Date().toISOString()
       };
 
@@ -281,12 +286,25 @@ const App: React.FC = () => {
       const newClientData: FinancialState = {
           ...initialData,
           goals: [], // Ensure goals are empty for new client
-          authorizedEmails: email ? [email, currentUser.email] : [currentUser.email],
+          authorizedEmails: emailClean ? [emailClean, currentUser.email] : [currentUser.email],
           profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
       };
       
       // Save the NEW client row
       saveUserData(newClientId, newClientData);
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+      if (!businessData) return;
+      
+      // 1. Remove from Advisor's list
+      const updatedClients = businessData.managedClients?.filter(c => c.id !== clientId) || [];
+      const updatedBusinessData = { ...businessData, managedClients: updatedClients };
+      setBusinessData(updatedBusinessData);
+      setData(updatedBusinessData);
+      
+      // 2. Delete the actual client row from DB
+      await deleteUserData(clientId);
   };
 
   const handleSelectClient = (clientId: string) => {
@@ -317,10 +335,12 @@ const App: React.FC = () => {
   };
 
   const handleShareClientAccess = (clientId: string, email: string) => {
+      const emailClean = email.toLowerCase().trim();
+      
       // 1. Update Advisor's record of the email
       if (businessData) {
           const updatedClients = businessData.managedClients?.map(c => 
-              c.id === clientId ? { ...c, email: email } : c
+              c.id === clientId ? { ...c, email: emailClean } : c
           );
           const updatedAdvisorData = { ...businessData, managedClients: updatedClients };
           setBusinessData(updatedAdvisorData);
@@ -331,10 +351,10 @@ const App: React.FC = () => {
       fetchUserData(clientId).then(clientData => {
           if (clientData) {
               const currentEmails = clientData.authorizedEmails || [];
-              if (!currentEmails.includes(email)) {
+              if (!currentEmails.includes(emailClean)) {
                   const updatedClientData = { 
                       ...clientData, 
-                      authorizedEmails: [...currentEmails, email] 
+                      authorizedEmails: [...currentEmails, emailClean] 
                   };
                   saveUserData(clientId, updatedClientData);
               }
@@ -476,6 +496,7 @@ const App: React.FC = () => {
                 onSelectClient={handleSelectClient}
                 onAddClient={handleAddClient}
                 onShareClient={handleShareClientAccess}
+                onDeleteClient={handleDeleteClient} // Pass the delete handler
             />
         );
     }

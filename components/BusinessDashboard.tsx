@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ManagedClient } from '../types';
-import { Plus, Users, Search, ChevronLeft, Briefcase, UserCircle, Share2, LayoutDashboard } from 'lucide-react';
+import { Plus, Users, Search, ChevronLeft, Briefcase, UserCircle, Share2, LayoutDashboard, Trash2, AlertCircle } from 'lucide-react';
 import ShareModal from './ShareModal';
 
 interface BusinessDashboardProps {
@@ -9,9 +9,10 @@ interface BusinessDashboardProps {
   onSelectClient: (clientId: string) => void;
   onAddClient: (name: string, email: string) => void;
   onShareClient: (clientId: string, email: string) => void;
+  onDeleteClient: (clientId: string) => void; // New Prop
 }
 
-const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelectClient, onAddClient, onShareClient }) => {
+const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelectClient, onAddClient, onShareClient, onDeleteClient }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newClientName, setNewClientName] = useState('');
@@ -19,6 +20,9 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
   
   // Sharing state
   const [shareModalClient, setShareModalClient] = useState<ManagedClient | null>(null);
+  
+  // Delete State
+  const [deleteConfirmClient, setDeleteConfirmClient] = useState<ManagedClient | null>(null);
 
   const filteredClients = clients.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -29,6 +33,13 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
           setNewClientName('');
           setNewClientEmail('');
           setIsAddOpen(false);
+      }
+  };
+
+  const handleConfirmDelete = () => {
+      if (deleteConfirmClient) {
+          onDeleteClient(deleteConfirmClient.id);
+          setDeleteConfirmClient(null);
       }
   };
 
@@ -126,6 +137,13 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
                                 >
                                     <Share2 size={18} />
                                 </button>
+                                <button 
+                                    onClick={() => setDeleteConfirmClient(client)}
+                                    className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-red-500 transition"
+                                    title="מחיקת לקוח"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
                             </div>
                         </div>
                         <h3 className="text-xl font-bold text-slate-800 mb-1">{client.name}</h3>
@@ -164,6 +182,37 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
                 }}
                 onClose={() => setShareModalClient(null)}
             />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmClient && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setDeleteConfirmClient(null)}>
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center transform transition-all scale-100" onClick={e => e.stopPropagation()}>
+                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                        <AlertCircle size={32} />
+                    </div>
+                    <h3 className="font-black text-2xl text-slate-800 mb-2">מחיקת לקוח</h3>
+                    <p className="text-slate-500 mb-8 leading-relaxed">
+                        האם אתם בטוחים שברצונכם למחוק את <strong>{deleteConfirmClient.name}</strong>? 
+                        <br/>
+                        הפעולה תמחק את כל הנתונים הפיננסיים המשויכים לתיק זה ולא ניתנת לשחזור.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                        <button 
+                            onClick={() => setDeleteConfirmClient(null)} 
+                            className="px-6 py-3 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold transition"
+                        >
+                            ביטול
+                        </button>
+                        <button 
+                            onClick={handleConfirmDelete} 
+                            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition"
+                        >
+                            כן, מחק
+                        </button>
+                    </div>
+                </div>
+            </div>
         )}
     </div>
   );
