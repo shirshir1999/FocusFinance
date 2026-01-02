@@ -185,6 +185,8 @@ const App: React.FC = () => {
               }
           } else {
               // Create NEW data structure (Personal)
+              // Only reached if fetching failed AND user wants to create new.
+              // Logic moved to initUser to prefer shared portfolios.
               const name = currentUser?.user_metadata?.full_name || 'פרופיל ראשי';
               const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
               const newData = {
@@ -220,31 +222,32 @@ const App: React.FC = () => {
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
-                // Check for persisted state on refresh (Sticky Session)
-                const lastViewed = localStorage.getItem('lastViewedPortfolio');
-                const lastMode = localStorage.getItem('lastViewMode');
-
-                if (lastViewed && lastViewed !== currentUser.id) {
-                    // Validate if I still have access
-                    const canAccess = others.some((s: any) => s.id === lastViewed) || (await fetchUserData(lastViewed)); // Fallback check
-                    if (canAccess) {
-                        // If I was looking at a client, load that client
-                        // Also need to load MY business data in background if I'm an advisor
-                        const myData = await fetchUserData(currentUser.id);
-                        if (myData && myData.isBusinessAccount) {
-                            setBusinessData(myData);
-                        }
-                        await loadPortfolioData(lastViewed);
-                        return;
-                    }
-                }
-
+                // PRIORITY: If I have a shared portfolio (likely created by advisor), LOAD IT FIRST.
+                // Do not create a new empty user row if a shared row exists.
                 if (others.length > 0) {
-                    // I am a CLIENT. Load the first portfolio shared with me (likely my real data managed by advisor)
-                    await loadPortfolioData(others[0].id);
+                    const primaryShared = others[0].id; // The Advisor-created portfolio ID
+                    // Check persistence if user was navigating elsewhere, but default to shared on first load
+                    const lastViewed = localStorage.getItem('lastViewedPortfolio');
+                    
+                    if (lastViewed && (lastViewed === primaryShared || lastViewed === currentUser.id)) {
+                         // Respect last view if valid, but map my-id to shared-id if empty?
+                         // Simplest: If lastViewed is my ID, check if it exists. If not, switch to shared.
+                         const myDataExists = await fetchUserData(currentUser.id);
+                         if (lastViewed === currentUser.id && !myDataExists) {
+                             await loadPortfolioData(primaryShared);
+                         } else {
+                             await loadPortfolioData(lastViewed);
+                         }
+                    } else {
+                        // First time or no persistence -> Load shared
+                        await loadPortfolioData(primaryShared);
+                    }
                 } else {
-                    // I am a REGULAR USER or ADVISOR. Load my own portfolio.
+                    // I am a REGULAR USER or ADVISOR with no shared files aimed at me.
+                    // Load my own portfolio.
                     await loadPortfolioData(currentUser.id);
+                    
+                    const lastMode = localStorage.getItem('lastViewMode');
                     if (lastMode === 'business_hub') setViewMode('business_hub');
                 }
             } catch (e) {
@@ -261,11 +264,22 @@ const App: React.FC = () => {
   useEffect(() => {
     // Only save if data has been successfully loaded to avoid overwriting cloud with initial empty state
     if (currentUser && currentPortfolioId && isDataLoaded && data !== initialData) {
-      saveUserData(currentPortfolioId, data);
+      
+      // Ensure current user is authorized before saving (safety)
+      // Also ensure existing authorized emails are preserved
+      const email = currentUser.email?.toLowerCase().trim();
+      let emailList = data.authorizedEmails || [];
+      if (!emailList.includes(email)) {
+          emailList = [...emailList, email];
+      }
+      
+      const dataToSave = { ...data, authorizedEmails: emailList };
+        
+      saveUserData(currentPortfolioId, dataToSave);
       
       // If we are editing the Business User's own data (e.g. added a client), update businessData state too
       if (currentPortfolioId === currentUser?.id && data.isBusinessAccount) {
-          setBusinessData(data);
+          setBusinessData(dataToSave);
       }
     }
   }, [data, currentPortfolioId, currentUser, isDataLoaded]);
@@ -329,7 +343,7 @@ const App: React.FC = () => {
       // 2. Initialize Client's Data in DB
       // IMPORTANT: Add BOTH client email and advisor email to authorized list
       const authorized = [advisorEmail];
-      if (emailClean) authorized.push(emailClean);
+      if (emailClean && emailClean !== advisorEmail) authorized.push(emailClean);
 
       const newClientData: FinancialState = {
           ...initialData,
@@ -340,9 +354,6 @@ const App: React.FC = () => {
       
       // Save the NEW client row IMMEDIATELY
       await saveUserData(newClientId, newClientData);
-      
-      // Optional: Auto-switch to new client? 
-      // loadPortfolioData(newClientId); 
   };
 
   const handleDeleteClient = async (clientId: string) => {

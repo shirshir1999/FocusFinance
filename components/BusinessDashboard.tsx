@@ -28,7 +28,8 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
 
   const handleAddSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(newClientName) {
+      // Email is now mandatory to ensure linking works
+      if(newClientName && newClientEmail) {
           onAddClient(newClientName, newClientEmail);
           setNewClientName('');
           setNewClientEmail('');
@@ -105,14 +106,16 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ clients, onSelect
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-emerald-700 mb-1">אימייל (אופציונלי - לשיתוף)</label>
+                            <label className="block text-xs font-bold text-emerald-700 mb-1">אימייל (חובה לחיבור התיק)</label>
                             <input 
                                 type="email" 
+                                required
                                 value={newClientEmail} 
                                 onChange={(e) => setNewClientEmail(e.target.value)}
                                 className="w-full p-3 rounded-xl border border-emerald-200 outline-none focus:ring-2 focus:ring-emerald-500"
                                 placeholder="client@gmail.com"
                             />
+                            <p className="text-[10px] text-emerald-600 mt-1">התיק יקושר אוטומטית לחשבון הגוגל של הלקוח עם אימייל זה.</p>
                         </div>
                         <div className="flex gap-2 pt-2">
                             <button type="button" onClick={() => setIsAddOpen(false)} className="flex-1 py-2 text-slate-500 font-bold bg-white rounded-xl border border-slate-200 hover:bg-slate-50">ביטול</button>
