@@ -56,6 +56,17 @@ const initialData: FinancialState = {
 const DEFAULT_PROFILE_COLOR = '#3b82f6';
 const COLORS = ['#3b82f6', '#ec4899', '#8b5cf6', '#f59e0b', '#10b981'];
 
+// Simple UUID generator fallback
+const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
+
 const App: React.FC = () => {
   // Navigation & View State
   const [activeView, setActiveView] = useState<TabId>('dashboard');
@@ -215,32 +226,36 @@ const App: React.FC = () => {
                 // Ensure email is lowercase for comparison
                 const email = currentUser.email?.toLowerCase().trim();
                 
-                // 1. STRATEGY A: Check for DIRECT email-based portfolio ID (The Advisor created this for me)
-                const directPortfolioId = `portfolio_${email}`;
-                const directData = await fetchUserData(directPortfolioId);
-
-                // 2. STRATEGY B: Check for shared portfolios (Old logic or multi-share)
+                // 1. Search for shared portfolios (Advisor Created or Shared)
+                // This is prioritized because if an advisor created a portfolio for me, it will be here.
                 const shared = await fetchSharedPortfolios(email);
+                
+                // Filter out my own ID just in case
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
-                // PRIORITY 1: Direct Portfolio Match (portfolio_client@gmail.com)
-                if (directData) {
-                    await loadPortfolioData(directPortfolioId);
+                // PRIORITY 1: Shared Portfolios found via Query (e.g. Advisor assigned)
+                if (others.length > 0) {
+                    // Load the first one by default if it's likely the main one managed by advisor
+                    await loadPortfolioData(others[0].id);
                     return;
                 }
 
-                // PRIORITY 2: Shared Portfolios found via Query
-                if (others.length > 0) {
-                    await loadPortfolioData(others[0].id);
+                // PRIORITY 2: Check for DIRECT email-based portfolio ID (Legacy support: portfolio_client@gmail.com)
+                const directPortfolioId = `portfolio_${email}`;
+                const directData = await fetchUserData(directPortfolioId);
+                if (directData) {
+                    await loadPortfolioData(directPortfolioId);
                     return;
                 }
 
                 // PRIORITY 3: Sticky Session (User was here before)
                 const lastViewed = localStorage.getItem('lastViewedPortfolio');
                 if (lastViewed && lastViewed !== currentUser.id) {
-                     const canAccess = await fetchUserData(lastViewed); // Simple check
-                     if (canAccess) {
+                     // Try to load, but it might fail if permissions revoked. Simple try/catch or just let loadPortfolioData handle it
+                     // We rely on fetchUserData to return null if access denied
+                     const possibleData = await fetchUserData(lastViewed);
+                     if (possibleData) {
                          await loadPortfolioData(lastViewed);
                          return;
                      }
@@ -270,7 +285,7 @@ const App: React.FC = () => {
       // Also ensure existing authorized emails are preserved
       const email = currentUser.email?.toLowerCase().trim();
       let emailList = data.authorizedEmails || [];
-      if (!emailList.includes(email)) {
+      if (email && !emailList.includes(email)) {
           emailList = [...emailList, email];
       }
       
@@ -323,9 +338,10 @@ const App: React.FC = () => {
       if (!businessData) return;
       
       const emailClean = email ? email.toLowerCase().trim() : '';
-      // Deterministic ID based on email if available, otherwise timestamp
-      const newClientId = emailClean ? `portfolio_${emailClean}` : `client_${Date.now()}`;
       const advisorEmail = currentUser.email?.toLowerCase().trim();
+      
+      // Generate a valid UUID for the new portfolio to ensure DB compatibility
+      const newClientId = generateUUID();
       
       const newClient: ManagedClient = {
           id: newClientId,
@@ -334,13 +350,19 @@ const App: React.FC = () => {
           lastAccess: new Date().toISOString()
       };
 
-      // 1. Update Advisor's list locally and save
+      // 1. Update Advisor's list locally
       const updatedBusinessData = {
           ...businessData,
           managedClients: [...(businessData.managedClients || []), newClient]
       };
+      
+      // Update state for UI
       setBusinessData(updatedBusinessData); 
       setData(updatedBusinessData); 
+      
+      // CRITICAL: Explicitly save advisor data immediately to persist the new client link
+      // This prevents data loss if the user navigates or refreshes before the reactive useEffect fires
+      await saveUserData(currentUser.id, updatedBusinessData);
 
       // 2. Initialize Client's Data in DB
       // IMPORTANT: Add BOTH client email and advisor email to authorized list
@@ -354,7 +376,7 @@ const App: React.FC = () => {
           profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
       };
       
-      // Save the NEW client row IMMEDIATELY with the DETERMINISTIC ID
+      // Save the NEW client row IMMEDIATELY
       await saveUserData(newClientId, newClientData);
   };
 
@@ -364,8 +386,12 @@ const App: React.FC = () => {
       // 1. Remove from Advisor's list
       const updatedClients = businessData.managedClients?.filter(c => c.id !== clientId) || [];
       const updatedBusinessData = { ...businessData, managedClients: updatedClients };
+      
       setBusinessData(updatedBusinessData);
       setData(updatedBusinessData);
+      
+      // Explicit save for Advisor
+      await saveUserData(currentUser.id, updatedBusinessData);
       
       // 2. Delete the actual client row from DB
       await deleteUserData(clientId);
@@ -411,6 +437,7 @@ const App: React.FC = () => {
           const updatedAdvisorData = { ...businessData, managedClients: updatedClients };
           setBusinessData(updatedAdvisorData);
           setData(updatedAdvisorData); 
+          saveUserData(currentUser.id, updatedAdvisorData); // Explicit save
       }
 
       // 2. Update Client's Data permissions
