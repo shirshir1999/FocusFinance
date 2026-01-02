@@ -17,8 +17,7 @@ import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
 import TermsModal from './components/TermsModal';
-import PermissionsModal from './components/PermissionsModal'; // New Import
-// Sidebar removed
+import PermissionsModal from './components/PermissionsModal';
 import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile, ManagedClient } from './types';
 import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight, Briefcase, Shield } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
@@ -50,8 +49,8 @@ const initialData: FinancialState = {
   },
   dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
   hiddenWidgets: [],
-  managedClients: [], // New
-  authorizedEmails: [], // New
+  managedClients: [], 
+  authorizedEmails: [], 
 };
 
 const DEFAULT_PROFILE_COLOR = '#3b82f6';
@@ -68,6 +67,7 @@ const App: React.FC = () => {
   const [businessData, setBusinessData] = useState<FinancialState | null>(null); // Holds the ADVISOR's own data (client list)
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentPortfolioId, setCurrentPortfolioId] = useState<string>(''); // ID of the data row being viewed (User ID or Client UUID)
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // CRITICAL: Prevents saving empty state over real data
   
   const [sharedPortfolios, setSharedPortfolios] = useState<{id: string, name: string}[]>([]); // List of portfolios shared with me
 
@@ -113,7 +113,7 @@ const App: React.FC = () => {
             console.error("Auth check failed:", err);
             setCurrentUser(null);
         } finally {
-            setLoading(false);
+            if (!currentUser) setLoading(false);
         }
     };
     initAuth();
@@ -125,14 +125,16 @@ const App: React.FC = () => {
   }, []);
 
   // Load Data Logic
-  const loadPortfolioData = async (portfolioId: string) => {
+  const loadPortfolioData = async (portfolioId: string, isAdvisorMode: boolean = false) => {
       setLoading(true);
+      setIsDataLoaded(false); // Lock saving until load is complete
       
       // Reset view tabs when loading new data
       setActiveView('dashboard');
       
       try {
           const cloudData = await fetchUserData(portfolioId);
+          
           if (cloudData) {
               // Ensure basic structure
               if (!cloudData.profiles || cloudData.profiles.length === 0) {
@@ -153,19 +155,29 @@ const App: React.FC = () => {
 
               setData(cloudData);
               setCurrentPortfolioId(portfolioId);
+              
+              // Persist selection for refresh
+              localStorage.setItem('lastViewedPortfolio', portfolioId);
 
               // Logic to handle Business Accounts vs Personal
               if (cloudData.isBusinessAccount && portfolioId === currentUser?.id) {
                   setBusinessData(cloudData); // Store advisor's data
-                  setViewMode('business_hub'); // Default to business hub
+                  // Only go to hub if we are intentionally navigating to root, otherwise stay on dashboard
+                  if (!isAdvisorMode && localStorage.getItem('lastViewMode') === 'business_hub') {
+                      setViewMode('business_hub');
+                  } else {
+                      setViewMode('dashboard');
+                  }
               } else {
                   // Normal user or Client View - FORCE Dashboard view
                   setViewMode('dashboard');
+                  localStorage.removeItem('lastViewMode');
               }
 
               if (!cloudData.hasAcceptedTerms && portfolioId === currentUser?.id) {
                   setShowTerms(true);
               }
+              
               if (cloudData.profiles.length === 1) {
                   setActiveProfileId(cloudData.profiles[0].id);
               } else {
@@ -190,6 +202,7 @@ const App: React.FC = () => {
       } catch (e) {
           console.error("Error loading data", e);
       } finally {
+          setIsDataLoaded(true); // Unlock saving
           setLoading(false);
       }
   };
@@ -207,12 +220,32 @@ const App: React.FC = () => {
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
+                // Check for persisted state on refresh (Sticky Session)
+                const lastViewed = localStorage.getItem('lastViewedPortfolio');
+                const lastMode = localStorage.getItem('lastViewMode');
+
+                if (lastViewed && lastViewed !== currentUser.id) {
+                    // Validate if I still have access
+                    const canAccess = others.some((s: any) => s.id === lastViewed) || (await fetchUserData(lastViewed)); // Fallback check
+                    if (canAccess) {
+                        // If I was looking at a client, load that client
+                        // Also need to load MY business data in background if I'm an advisor
+                        const myData = await fetchUserData(currentUser.id);
+                        if (myData && myData.isBusinessAccount) {
+                            setBusinessData(myData);
+                        }
+                        await loadPortfolioData(lastViewed);
+                        return;
+                    }
+                }
+
                 if (others.length > 0) {
-                    // I am a CLIENT. Load the first portfolio shared with me.
+                    // I am a CLIENT. Load the first portfolio shared with me (likely my real data managed by advisor)
                     await loadPortfolioData(others[0].id);
                 } else {
                     // I am a REGULAR USER or ADVISOR. Load my own portfolio.
                     await loadPortfolioData(currentUser.id);
+                    if (lastMode === 'business_hub') setViewMode('business_hub');
                 }
             } catch (e) {
                 console.error("Error initializing user", e);
@@ -224,9 +257,10 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  // Save Data
+  // Save Data - WITH PROTECTION
   useEffect(() => {
-    if (currentPortfolioId && data !== initialData) {
+    // Only save if data has been successfully loaded to avoid overwriting cloud with initial empty state
+    if (currentUser && currentPortfolioId && isDataLoaded && data !== initialData) {
       saveUserData(currentPortfolioId, data);
       
       // If we are editing the Business User's own data (e.g. added a client), update businessData state too
@@ -234,10 +268,12 @@ const App: React.FC = () => {
           setBusinessData(data);
       }
     }
-  }, [data, currentPortfolioId]);
+  }, [data, currentPortfolioId, currentUser, isDataLoaded]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('lastViewedPortfolio');
+    localStorage.removeItem('lastViewMode');
     setCurrentUser(null);
     setData(initialData);
     setBusinessData(null);
@@ -263,10 +299,12 @@ const App: React.FC = () => {
       }
       // Always navigate to hub
       setViewMode('business_hub');
+      localStorage.setItem('lastViewMode', 'business_hub');
+      localStorage.setItem('lastViewedPortfolio', currentUser.id);
       setIsProfileMenuOpen(false);
   };
 
-  const handleAddClient = (name: string, email: string) => {
+  const handleAddClient = async (name: string, email: string) => {
       if (!businessData) return;
       
       const newClientId = `client_${Date.now()}`;
@@ -280,13 +318,13 @@ const App: React.FC = () => {
           lastAccess: new Date().toISOString()
       };
 
-      // 1. Update Advisor's list
+      // 1. Update Advisor's list locally and save
       const updatedBusinessData = {
           ...businessData,
           managedClients: [...(businessData.managedClients || []), newClient]
       };
-      setBusinessData(updatedBusinessData); // Update local store
-      setData(updatedBusinessData); // Trigger save to DB (since currentPortfolioId is Advisor)
+      setBusinessData(updatedBusinessData); 
+      setData(updatedBusinessData); 
 
       // 2. Initialize Client's Data in DB
       // IMPORTANT: Add BOTH client email and advisor email to authorized list
@@ -301,7 +339,10 @@ const App: React.FC = () => {
       };
       
       // Save the NEW client row IMMEDIATELY
-      saveUserData(newClientId, newClientData);
+      await saveUserData(newClientId, newClientData);
+      
+      // Optional: Auto-switch to new client? 
+      // loadPortfolioData(newClientId); 
   };
 
   const handleDeleteClient = async (clientId: string) => {
@@ -327,6 +368,8 @@ const App: React.FC = () => {
           // Reload advisor data
           setData(businessData);
           setCurrentPortfolioId(currentUser.id);
+          localStorage.setItem('lastViewedPortfolio', currentUser.id);
+          localStorage.setItem('lastViewMode', 'business_hub');
           setViewMode('business_hub');
       } else {
           // Fallback
@@ -354,7 +397,7 @@ const App: React.FC = () => {
           );
           const updatedAdvisorData = { ...businessData, managedClients: updatedClients };
           setBusinessData(updatedAdvisorData);
-          setData(updatedAdvisorData); // Trigger save for advisor
+          setData(updatedAdvisorData); 
       }
 
       // 2. Update Client's Data permissions
