@@ -17,9 +17,10 @@ import HistoryTableModal from './components/HistoryTableModal';
 import AuthScreen from './components/AuthScreen';
 import HelpModal from './components/HelpModal';
 import TermsModal from './components/TermsModal';
+import PermissionsModal from './components/PermissionsModal'; // New Import
 // Sidebar removed
 import { FinancialState, TabId, BaseItem, AssetCategory, HistoryEntry, CashFlowState, UserProfile, ManagedClient } from './types';
-import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight, Briefcase } from 'lucide-react';
+import { ExternalLink, AlertTriangle, LogOut, Loader2, ChevronDown, Plus, Users, Info, Trash2, ArrowRight, Briefcase, Shield } from 'lucide-react';
 import { TreeLogo } from './components/TreeLogo';
 import { supabase, saveUserData, fetchUserData, deleteUserData, hasMissingKeys, clearCustomKeys, fetchSharedPortfolios } from './services/supabase';
 
@@ -87,6 +88,9 @@ const App: React.FC = () => {
       step: 'confirm' | 'action'; 
       targetProfileId?: string; 
   }>({ isOpen: false, profileId: null, step: 'confirm' });
+
+  // Permissions Modal State
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -173,7 +177,8 @@ const App: React.FC = () => {
               const newProfiles = [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }];
               const newData = {
                   ...initialData,
-                  profiles: newProfiles
+                  profiles: newProfiles,
+                  authorizedEmails: [currentUser.email]
               };
               setData(newData);
               setCurrentPortfolioId(portfolioId);
@@ -266,6 +271,7 @@ const App: React.FC = () => {
       
       const newClientId = `client_${Date.now()}`;
       const emailClean = email ? email.toLowerCase().trim() : '';
+      const advisorEmail = currentUser.email?.toLowerCase().trim();
       
       const newClient: ManagedClient = {
           id: newClientId,
@@ -283,14 +289,18 @@ const App: React.FC = () => {
       setData(updatedBusinessData); // Trigger save to DB (since currentPortfolioId is Advisor)
 
       // 2. Initialize Client's Data in DB
+      // IMPORTANT: Add BOTH client email and advisor email to authorized list
+      const authorized = [advisorEmail];
+      if (emailClean) authorized.push(emailClean);
+
       const newClientData: FinancialState = {
           ...initialData,
-          goals: [], // Ensure goals are empty for new client
-          authorizedEmails: emailClean ? [emailClean, currentUser.email] : [currentUser.email],
+          goals: [], 
+          authorizedEmails: authorized,
           profiles: [{ id: 'main', name: name, color: DEFAULT_PROFILE_COLOR, isMainUser: true }]
       };
       
-      // Save the NEW client row
+      // Save the NEW client row IMMEDIATELY
       saveUserData(newClientId, newClientData);
   };
 
@@ -360,6 +370,13 @@ const App: React.FC = () => {
               }
           }
       });
+  };
+
+  const handleRevokeAccess = (emailToRevoke: string) => {
+      const updatedEmails = data.authorizedEmails?.filter(e => e !== emailToRevoke) || [];
+      const updatedData = { ...data, authorizedEmails: updatedEmails };
+      setData(updatedData);
+      // Trigger save handled by useEffect
   };
 
   // --- End Business Logic ---
@@ -700,6 +717,14 @@ const App: React.FC = () => {
                                   )}
                                   
                                   <div className="my-1 border-t border-slate-100"></div>
+                                  
+                                  {/* Access Management */}
+                                  <button onClick={() => { setIsPermissionsOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-right px-4 py-2 hover:bg-slate-50 text-slate-600 text-sm font-medium flex items-center gap-2">
+                                      <Shield size={14}/>
+                                      ניהול הרשאות גישה
+                                  </button>
+
+                                  <div className="my-1 border-t border-slate-100"></div>
                                   <button onClick={() => { setIsProfileMenuOpen(false); handleLogout(); }} className="w-full text-right px-4 py-2 hover:bg-red-50 text-red-600 text-sm font-medium flex items-center gap-2"><LogOut size={14}/>התנתקות</button>
                               </div>
                           )}
@@ -719,6 +744,15 @@ const App: React.FC = () => {
               </footer>
           </div>
       </div>
+
+      <PermissionsModal 
+        isOpen={isPermissionsOpen}
+        onClose={() => setIsPermissionsOpen(false)}
+        authorizedEmails={data.authorizedEmails || []}
+        ownerId={currentPortfolioId}
+        currentUserId={currentUser.id}
+        onRevoke={handleRevokeAccess}
+      />
 
       {currentUser && showTerms && <TermsModal onAccept={handleAcceptTerms} />}
       {isEditNameOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsEditNameOpen(false)}><div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}><h3 className="text-lg font-bold text-slate-800 mb-4">עריכת שם משתמש</h3><input type="text" value={newNameInput} onChange={(e) => setNewNameInput(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="הכנס שם מלא" autoFocus /><div className="flex justify-end gap-2"><button onClick={() => setIsEditNameOpen(false)} className="px-4 py-2 text-slate-500 font-medium">ביטול</button><button onClick={handleEditName} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold">שמור</button></div></div></div>)}
