@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import BusinessDashboard from './components/BusinessDashboard'; 
@@ -191,25 +190,26 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-        // --- KEY FIX: Check for shared portfolios (Client Access) FIRST ---
+        // --- UPDATED LOGIC: Check for shared portfolios FIRST ---
         const initUser = async () => {
             setLoading(true);
             try {
+                // 1. Check if I am authorized on any shared portfolios
                 const shared = await fetchSharedPortfolios(currentUser.email);
-                // Filter out own portfolio if it appears (unlikely but safe)
                 const others = shared.filter((s: any) => s.id !== currentUser.id);
                 setSharedPortfolios(others);
 
                 if (others.length > 0) {
-                    // USER IS A CLIENT: Load the first shared portfolio found
+                    // I am a CLIENT. Load the first portfolio shared with me.
                     await loadPortfolioData(others[0].id);
                 } else {
-                    // USER IS REGULAR/ADVISOR: Load their own data
+                    // I am a REGULAR USER or ADVISOR. Load my own portfolio.
                     await loadPortfolioData(currentUser.id);
                 }
             } catch (e) {
-                console.error("Error init user", e);
-                setLoading(false);
+                console.error("Error initializing user", e);
+                // Fallback
+                loadPortfolioData(currentUser.id);
             }
         };
         initUser();
