@@ -1,4 +1,5 @@
 
+
 export type TabId = 'dashboard' | 'accounts' | 'pension' | 'investments' | 'realestate' | 'loans' | 'goals' | 'cashflow' | 'feecalc' | 'pension_calc' | 'switching_calc' | 'future_projection' | 'history_view';
 export type AssetCategory = 'accounts' | 'pensions' | 'investments' | 'realEstate' | 'loans' | 'goals';
 
@@ -131,18 +132,7 @@ export interface CashFlowState {
     categoriesOrder?: string[]; // Custom sort order
 }
 
-export interface ManagedClient {
-    id: string; // The UUID of the client's portfolio
-    name: string;
-    email?: string;
-    lastAccess?: string;
-}
-
 export interface FinancialState {
-  // Business / Consultant Mode
-  isBusinessAccount?: boolean;
-  managedClients?: ManagedClient[]; // If business, list of clients
-  
   // Sharing & Auth
   authorizedEmails?: string[]; // Who can access this specific portfolio (besides owner)
 
@@ -166,4 +156,10 @@ export interface ChartDataPoint {
   name: string;
   value: number;
   fill?: string;
+}
+
+export interface ManagedClient {
+    id: string;
+    name: string;
+    email: string;
 }

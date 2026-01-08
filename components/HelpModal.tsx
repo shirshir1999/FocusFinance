@@ -1,13 +1,12 @@
 
 import React, { useState } from 'react';
-import { X, BookOpen, ShieldCheck, HelpCircle, ChevronDown, ChevronUp, PlayCircle } from 'lucide-react';
+import { X, BookOpen, ShieldCheck, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface HelpModalProps {
   onClose: () => void;
-  onStartTour: () => void; // New prop
 }
 
-const HelpModal: React.FC<HelpModalProps> = ({ onClose, onStartTour }) => {
+const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'guide' | 'faq'>('guide');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
@@ -101,17 +100,6 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose, onStartTour }) => {
                             </div>
                         </div>
                     </section>
-
-                    <div className="mt-8 pt-6 border-t border-slate-100">
-                        <button 
-                            onClick={() => { onClose(); onStartTour(); }}
-                            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold shadow-lg shadow-emerald-200 transition transform hover:-translate-y-1 flex items-center justify-center gap-3"
-                        >
-                            <PlayCircle size={24} />
-                            הפעל הדרכה אינטראקטיבית על המערכת
-                        </button>
-                        <p className="text-center text-xs text-slate-400 mt-2">ההדרכה תיקח אתכם צעד צעד דרך מסכי המערכת</p>
-                    </div>
                 </div>
             ) : (
                 <div className="space-y-3">

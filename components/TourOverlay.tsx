@@ -138,13 +138,13 @@ const TourOverlay: React.FC<TourOverlayProps> = ({ isOpen, onClose, onNavigate, 
             const rect = element.getBoundingClientRect();
             const padding = 4;
 
-            // Highlight Box (Absolute positioned relative to document)
+            // Highlight Box (Fixed positioned)
             setHighlightStyle({
-                top: rect.top + window.scrollY - padding,
-                left: rect.left + window.scrollX - padding,
+                top: rect.top - padding,
+                left: rect.left - padding,
                 width: rect.width + (padding * 2),
                 height: rect.height + (padding * 2),
-                position: 'absolute',
+                position: 'fixed',
                 display: 'block',
                 borderRadius: '12px'
             });
@@ -177,11 +177,12 @@ const TourOverlay: React.FC<TourOverlayProps> = ({ isOpen, onClose, onNavigate, 
 
         updatePositions();
         window.addEventListener('resize', updatePositions);
-        window.addEventListener('scroll', updatePositions);
+        // Use capture:true to detect scroll events on internal elements (divs), not just window
+        window.addEventListener('scroll', updatePositions, true);
 
         return () => {
             window.removeEventListener('resize', updatePositions);
-            window.removeEventListener('scroll', updatePositions);
+            window.removeEventListener('scroll', updatePositions, true);
         };
 
     }, 300);

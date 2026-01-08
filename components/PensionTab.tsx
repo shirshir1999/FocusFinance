@@ -15,10 +15,9 @@ interface PensionTabProps {
   onBack: () => void;
   profiles: any[];
   activeProfileId: string;
-  tourStep?: string; // New prop for tour control
 }
 
-const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRemove, onUpdate, onUpdateDetails, onBack, profiles, activeProfileId, tourStep }) => {
+const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRemove, onUpdate, onUpdateDetails, onBack, profiles, activeProfileId }) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PensionItem | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -30,37 +29,6 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
   const [track, setTrack] = useState('');
   const [feeAcc, setFeeAcc] = useState('');
   const [feeDep, setFeeDep] = useState('');
-
-  // Tour Simulation Logic
-  useEffect(() => {
-      if (tourStep === 'pension-add-btn') {
-          // Close form if open to show the button clearly
-          setIsAddOpen(false);
-      }
-      if (tourStep === 'pension-form-fill') {
-          setIsAddOpen(true);
-          // Simulate filling
-          setName('מנורה מבטחים');
-          setValue('185000');
-          setMonthlyDeposit('1500');
-          setFeeAcc('0.2');
-          setFeeDep('1.5');
-          setTrack('מניות חו״ל');
-      }
-      if (tourStep === 'pension-item-show') {
-          setIsAddOpen(false);
-      }
-      if (tourStep === 'pension-item-edit' || tourStep === 'modal-update') {
-          // Find the demo item (id 'demo-pension') and open it
-          const demoItem = items.find(i => i.id === 'demo-pension');
-          if (demoItem) {
-              setSelectedItem(demoItem);
-          }
-      }
-      if (tourStep === 'finish') {
-          setSelectedItem(null);
-      }
-  }, [tourStep, items]);
 
   useEffect(() => {
       if (initialType) {
@@ -139,7 +107,6 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
             </div>
           </div>
           <button 
-            id="tour-add-pension-btn"
             onClick={() => setIsAddOpen(!isAddOpen)}
             className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition transform hover:-translate-y-1 ${isAddOpen ? 'bg-slate-200 text-slate-600' : 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-cyan-200'}`}
           >
@@ -163,9 +130,8 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
               {items.map((item) => (
                 <div 
                     key={item.id} 
-                    id={item.id === 'demo-pension' ? 'tour-pension-item-demo' : undefined}
                     onClick={() => openItem(item)}
-                    className={`bg-white border border-slate-100 p-6 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group flex flex-col justify-between relative ${item.id === 'demo-pension' ? 'ring-2 ring-emerald-400' : ''}`}
+                    className={`bg-white border border-slate-100 p-6 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group flex flex-col justify-between relative`}
                 >
                     <div className="flex justify-between items-start mb-4">
                          <div className={`p-4 rounded-2xl ${item.type === 'pension' ? 'bg-cyan-50 text-cyan-600' : item.type === 'study_fund' ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-600'}`}>
@@ -232,7 +198,7 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
 
         {/* Inline Add Form */}
         {isAddOpen && (
-            <div id="tour-pension-form" className="bg-cyan-50/50 border border-cyan-100 rounded-3xl p-6 md:p-8 animate-fade-in shadow-sm">
+            <div className="bg-cyan-50/50 border border-cyan-100 rounded-3xl p-6 md:p-8 animate-fade-in shadow-sm">
                 <h3 className="text-xl font-black text-cyan-800 mb-6 flex items-center gap-2">
                     <Plus className="bg-cyan-200 text-cyan-700 p-1 rounded-lg" size={28} />
                     הוספת מוצר פנסיוני
@@ -346,7 +312,6 @@ const PensionTab: React.FC<PensionTabProps> = ({ items, initialType, onAdd, onRe
 
                     <div className="flex justify-end pt-2">
                         <button
-                            id="tour-pension-save-btn"
                             type="submit"
                             className="px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-200 transition transform hover:-translate-y-1"
                         >

@@ -40,6 +40,11 @@ const mockAuth = {
         const stored = localStorage.getItem('mock_session');
         return { data: { session: stored ? JSON.parse(stored) : null }, error: null };
     },
+    getUser: async () => {
+        const stored = localStorage.getItem('mock_session');
+        const session = stored ? JSON.parse(stored) : null;
+        return { data: { user: session?.user || null }, error: null };
+    },
     onAuthStateChange: (callback: any) => {
         // Simple mock subscription
         return { data: { subscription: { unsubscribe: () => {} } } };
@@ -150,50 +155,4 @@ export const deleteUserData = async (userId: string) => {
         .eq('id', userId);
 
     if (error) console.error('Error deleting user data:', error);
-};
-
-// Fetch portfolios shared WITH this email
-export const fetchSharedPortfolios = async (email: string) => {
-    // Normalize email for check
-    const normalizedEmail = email.toLowerCase().trim();
-
-    if (hasMissingKeys) {
-        // Mock: Scan all local storage keys starting with mock_data_
-        const shared = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('mock_data_')) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key) || '{}');
-                    if (data.authorizedEmails && Array.isArray(data.authorizedEmails) && data.authorizedEmails.includes(normalizedEmail)) {
-                        // Avoid adding own portfolio if fetched by mistake
-                        shared.push({
-                            id: key.replace('mock_data_', ''),
-                            name: data.profiles?.[0]?.name || 'תיק משותף',
-                            ownerName: 'יועץ/שותף' // Simplified for mock
-                        });
-                    }
-                } catch(e) {}
-            }
-        }
-        return shared;
-    }
-
-    // Real Supabase Query
-    // Note: This requires RLS policy to allow SELECT if email is in authorizedEmails column or json
-    const { data, error } = await supabase
-        .from('user_data')
-        .select('id, financial_json')
-        .contains('financial_json', { authorizedEmails: [normalizedEmail] });
-
-    if (error) {
-        console.error('Error fetching shared portfolios:', error);
-        return [];
-    }
-
-    return data.map((row: any) => ({
-        id: row.id,
-        name: row.financial_json?.profiles?.[0]?.name || 'תיק משותף',
-        ownerName: 'יועץ/שותף'
-    }));
 };
